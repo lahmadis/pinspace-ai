@@ -1,19 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // REFACTORED: Removed all webpack configurations
-  // - Webpack is no longer used in Next.js 16 (Turbopack is the default)
-  // - All webpack-specific configs have been migrated to Turbopack equivalents
-
+  // REFACTORED: Moved Turbopack configuration from experimental.turbo to top-level turbopack key
+  // - In Next.js 16+, Turbopack is stable and configured at the top level
+  // - Removed experimental.turbo block in favor of top-level turbopack key
+  // - This aligns with Next.js 16+ official documentation
+  
   // Turbopack configuration for canvas shim
   // This is necessary because react-pdf (via pdfjs-dist) tries to import the 'canvas' module
   // which is a Node.js-only module that doesn't work in the browser
   // The shim at ./src/shims/canvas.ts provides an empty export to prevent build errors
-  experimental: {
-    turbo: {
-      resolveAlias: {
-        canvas: "./src/shims/canvas.ts",
-      },
+  turbopack: {
+    resolveAlias: {
+      canvas: "./src/shims/canvas.ts",
     },
   },
   
