@@ -1,28 +1,20 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // REFACTORED: Removed experimental.turbo section
-  // - The experimental.turbo option is not documented in Next.js v16 official docs
-  // - Turbopack aliases are not needed for standard builds
-  // - Webpack configuration below handles canvas shimming for all build types
+  // REFACTORED: Removed all webpack configurations
+  // - Webpack is no longer used in Next.js 16 (Turbopack is the default)
+  // - All webpack-specific configs have been migrated to Turbopack equivalents
 
-  // Webpack configuration for canvas shim
-  // Documented: https://nextjs.org/docs/app/api-reference/next-config-js/webpack
-  webpack: (config, { isServer }) => {
-    // Alias canvas to shim for both server and client to prevent build errors
-    // This is necessary because canvas is a Node.js module that doesn't work in the browser
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      canvas: require.resolve("./src/shims/canvas.ts"),
-    };
-    
-    // Also ignore canvas module in pdfjs-dist if it tries to import it
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      canvas: false,
-    };
-    
-    return config;
+  // Turbopack configuration for canvas shim
+  // This is necessary because react-pdf (via pdfjs-dist) tries to import the 'canvas' module
+  // which is a Node.js-only module that doesn't work in the browser
+  // The shim at ./src/shims/canvas.ts provides an empty export to prevent build errors
+  experimental: {
+    turbo: {
+      resolveAlias: {
+        canvas: "./src/shims/canvas.ts",
+      },
+    },
   },
   
   // Documented: https://nextjs.org/docs/app/api-reference/next-config-js/compress
