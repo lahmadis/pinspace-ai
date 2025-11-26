@@ -159,8 +159,7 @@
 ### Verification
 1. Check `next.config.ts`:
    - Should be ESM format (`export default`)
-   - Should have Turbopack aliases for `canvas`
-   - Should have Webpack aliases for `canvas`
+   - Should have Turbopack aliases for `canvas` (webpack is no longer used in Next.js 16)
 2. Verify canvas shim exists at `src/shims/canvas.ts`
 3. Build the project: `npm run build`
 4. Verify no errors related to canvas module
