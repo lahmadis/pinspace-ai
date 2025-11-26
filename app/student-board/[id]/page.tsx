@@ -97,7 +97,8 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
   // ============================================================================
   // INITIAL DATA - Define initial elements before state declarations
   // ============================================================================
-  const initialElements: (CanvasElement & { text?: string; color?: string })[] = [
+  // REFACTORED: text and ownerId are now part of CanvasElement interface, so removed from intersection type
+  const initialElements: (CanvasElement & { color?: string })[] = [
     {
       id: "sticky-1",
       type: "sticky",
@@ -145,7 +146,8 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
   
   // Elements state - MUST be declared before any hooks that reference it
   // Store owner ID for each element to enforce permissions
-  const [elements, setElements] = useState<(CanvasElement & { text?: string; color?: string; ownerId?: string })[]>(initialElements);
+  // REFACTORED: ownerId is now part of CanvasElement interface, so removed from intersection type
+  const [elements, setElements] = useState<(CanvasElement & { color?: string })[]>(initialElements);
 
   // Comments state - Use function initializer for stable reference
   const [comments, setComments] = useState<Map<string, string[]>>(() => new Map());
@@ -262,10 +264,11 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
         penStrokes,
         annotations: [...annotationTools.annotations, annotation],
       });
-      // Record activity
-      recordActivity("annotation_created", {
+      // REFACTORED: Fixed recordActivity call - pass stateSnapshot as second arg, metadata as third arg
+      // Updated metadata to use annotationId and annotationType (renamed from 'type' to avoid conflict)
+      recordActivity("annotation_created", undefined, {
         annotationId: annotation.id,
-        type: annotation.type,
+        annotationType: annotation.type,
       });
     },
   });
@@ -275,10 +278,11 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
     boardId,
     enabled: activeTool === "critique",
     onPointCreate: (point) => {
-      // Record activity
-      recordActivity("critique_point_created", {
+      // REFACTORED: Fixed recordActivity call - pass stateSnapshot as second arg, metadata as third arg
+      // Updated metadata to use pointId and pointNumber (renamed from 'number' to avoid conflict)
+      recordActivity("critique_point_created", undefined, {
         pointId: point.id,
-        number: point.number,
+        pointNumber: point.number,
       });
     },
   });
@@ -580,7 +584,8 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
 
     // Check permissions for each selected element
     const elementsToDelete = elements.filter((el) => selectedElementIds.has(el.id));
-    const unauthorizedElements = elementsToDelete.filter((el) => !canDelete((el as any).ownerId));
+    // REFACTORED: ownerId is now part of CanvasElement interface, so no need for 'as any' cast
+    const unauthorizedElements = elementsToDelete.filter((el) => !canDelete(el.ownerId));
     
     if (unauthorizedElements.length > 0) {
       alert(`You don't have permission to delete ${unauthorizedElements.length} element(s).`);
@@ -589,6 +594,12 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
 
     // Record current state in history before deletion
     recordHistory();
+
+    // REFACTORED: Calculate updated elements and deleted elements before state update
+    // This ensures we have the correct values for recordActivity and avoids scope issues
+    // deletedElements must be calculated before clearing selectedElementIds
+    const deletedElements = elements.filter((el) => selectedElementIds.has(el.id));
+    const updatedElements = elements.filter((el) => !selectedElementIds.has(el.id));
 
     // Remove all selected elements from state in a single batch update
     setElements((prevElements) => {
@@ -605,10 +616,10 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
     // Clear selection after deletion
     setSelectedElementIds(new Set());
 
-    // Record activity
-    const deletedElements = elements.filter((el) => selectedElementIds.has(el.id));
+    // REFACTORED: Use updatedElements instead of newElements (which was out of scope)
+    // Record activity with the state after deletion (updatedElements)
     recordActivity("element_delete", {
-      elements: newElements,
+      elements: updatedElements,
       comments: Array.from(comments.entries()).map(([id, comments]) => ({ elementId: id, comments })),
       penStrokes,
     }, {
@@ -719,7 +730,8 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
 
     // Check edit permissions for selected elements
     const element = elements.find((el) => el.id === elementId);
-    if (element && !canEdit((element as any).ownerId)) {
+    // REFACTORED: ownerId is now part of CanvasElement interface, so no need for 'as any' cast
+    if (element && !canEdit(element.ownerId)) {
       alert("You don't have permission to move this element.");
       return;
     }
@@ -942,7 +954,8 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
       const defaultHeight = 150;
       const defaultZ = 1;
 
-      const newElement: CanvasElement & { text?: string; color?: string; ownerId?: string } = {
+      // REFACTORED: ownerId is now part of CanvasElement interface, so removed from intersection type
+      const newElement: CanvasElement & { color?: string } = {
         id: generateElementId("sticky"),
         type: "sticky",
         x: canvasX - defaultWidth / 2,
@@ -958,6 +971,10 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
       // Record state in history before creating new element
       recordHistory();
 
+      // REFACTORED: Calculate updated elements before state update to avoid scope issues
+      // This ensures we have the correct value for recordActivity
+      const updatedElements = [...elements, newElement];
+
       // Add new element to state
       setElements((prevElements) => {
         const newElements = [...prevElements, newElement];
@@ -972,9 +989,10 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
       // Automatically select the newly created element
       setSelectedElementIds(new Set([newElement.id]));
 
-      // Record activity
+      // REFACTORED: Use updatedElements instead of newElements (which was out of scope)
+      // Record activity with the state after creation (updatedElements)
       recordActivity("element_create", {
-        elements: newElements,
+        elements: updatedElements,
         comments: Array.from(comments.entries()).map(([id, comments]) => ({ elementId: id, comments })),
         penStrokes,
       }, {
@@ -992,7 +1010,8 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
     const defaultHeight = 200;
     const defaultZ = 1;
 
-    const newElement: CanvasElement & { text?: string; color?: string; ownerId?: string } = {
+    // REFACTORED: ownerId is now part of CanvasElement interface, so removed from intersection type
+    const newElement: CanvasElement & { color?: string } = {
       id: generateElementId("image"),
       type: "image",
       x: canvasX - defaultWidth / 2,
@@ -1026,7 +1045,8 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
     const defaultHeight = 320;
     const defaultZ = 1;
 
-    const newElement: CanvasElement & { text?: string; color?: string } = {
+    // REFACTORED: text is now part of CanvasElement interface, so removed from intersection type
+    const newElement: CanvasElement & { color?: string } = {
       id: generateElementId("pdf"),
       type: "image" as any, // TODO: Add "pdf" to ElementType union
       x: canvasX - defaultWidth / 2,
@@ -1115,7 +1135,8 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
         width = Math.max(width, 100);
         height = Math.max(height, 100);
 
-        const newElement: CanvasElement & { text?: string; color?: string; src?: string; ownerId?: string } = {
+        // REFACTORED: ownerId is now part of CanvasElement interface, so removed from intersection type
+        const newElement: CanvasElement & { color?: string } = {
           id: generateElementId("image"),
           type: "image",
           x: position.x - width / 2,
@@ -1217,10 +1238,10 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
     // Future: Upload to server and get URL
     const fileUrl = URL.createObjectURL(file); // Temporary blob URL
 
+    // REFACTORED: ownerId, text, and src are now part of CanvasElement interface
+    // Only include fields not in base type: color, pdfFile, pdfUrl
     const newElement: CanvasElement & { 
-      text?: string; 
       color?: string; 
-      src?: string;
       pdfFile?: File;
       pdfUrl?: string;
     } = {
@@ -1244,6 +1265,10 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
     // Record state in history before creating new element
     recordHistory();
 
+    // REFACTORED: Calculate updated elements before state update to avoid scope issues
+    // This ensures we have the correct value for recordActivity
+    const updatedElements = [...elements, newElement];
+
     // Add new element to state
     setElements((prevElements) => {
       const newElements = [...prevElements, newElement];
@@ -1261,9 +1286,10 @@ export default function StudentBoardPage({ params }: StudentBoardPageProps): JSX
     // Switch back to select tool after upload
     setActiveTool("select");
 
-    // Record activity
+    // REFACTORED: Use updatedElements instead of newElements (which was out of scope)
+    // Record activity with the state after creation (updatedElements)
     recordActivity("file_upload", {
-      elements: newElements,
+      elements: updatedElements,
       comments: Array.from(comments.entries()).map(([id, comments]) => ({ elementId: id, comments })),
       penStrokes,
     }, {

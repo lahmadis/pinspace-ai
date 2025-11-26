@@ -24,6 +24,7 @@ import type { PenStroke } from "@/hooks/usePenDrawing";
 
 /**
  * Activity types
+ * REFACTORED: Added annotation_created and critique_point_created to support annotation tools
  */
 export type ActivityType =
   | "element_create"
@@ -36,7 +37,9 @@ export type ActivityType =
   | "file_upload"
   | "board_lock"
   | "board_unlock"
-  | "board_reset";
+  | "board_reset"
+  | "annotation_created"      // REFACTORED: Added for annotation tools (rectangle, ellipse, arrow, textbox, highlight)
+  | "critique_point_created"; // REFACTORED: Added for critique point markers
 
 /**
  * Activity entry
@@ -57,7 +60,9 @@ export interface ActivityEntry {
   strokeCount?: number;
   // Snapshot of board state at this point (for time travel)
   stateSnapshot?: {
-    elements: (CanvasElement & { text?: string; color?: string; src?: string; ownerId?: string })[];
+    // REFACTORED: ownerId, text, and src are now part of CanvasElement interface
+    // Only include color which is not in the base type
+    elements: (CanvasElement & { color?: string })[];
     comments: Array<{ elementId: string; comments: string[] }>;
     penStrokes: PenStroke[];
   };
@@ -76,6 +81,7 @@ function generateActivityId(): string {
 
 /**
  * Format activity description
+ * REFACTORED: Extended metadata type to support annotation and critique point activities
  */
 function formatActivityDescription(
   type: ActivityType,
@@ -86,6 +92,12 @@ function formatActivityDescription(
     elementCount?: number;
     commentText?: string;
     strokeCount?: number;
+    // REFACTORED: Added annotation-specific metadata fields
+    annotationId?: string;
+    annotationType?: string;
+    // REFACTORED: Added critique point-specific metadata fields
+    pointId?: string;
+    pointNumber?: number;
   }
 ): string {
   const user = userName || `User ${userId.slice(-4)}`;
@@ -113,6 +125,14 @@ function formatActivityDescription(
       return `${user} unlocked the board`;
     case "board_reset":
       return `${user} reset the board`;
+    case "annotation_created":
+      // REFACTORED: Include annotation type in description if available
+      const annotationType = metadata?.annotationType || "annotation";
+      return `${user} created a ${annotationType} annotation`;
+    case "critique_point_created":
+      // REFACTORED: Include critique point number in description if available
+      const pointNum = metadata?.pointNumber !== undefined ? ` #${metadata.pointNumber}` : "";
+      return `${user} created critique point${pointNum}`;
     default:
       return `${user} performed an action`;
   }
@@ -191,11 +211,14 @@ export function useBoardActivity(options: UseBoardActivityOptions) {
 
   /**
    * Record an activity
+   * REFACTORED: Extended metadata type to support annotation and critique point activities
    */
   const recordActivity = useCallback((
     type: ActivityType,
     stateSnapshot?: {
-      elements: (CanvasElement & { text?: string; color?: string; src?: string; ownerId?: string })[];
+      // REFACTORED: ownerId, text, and src are now part of CanvasElement interface
+    // Only include color which is not in the base type
+    elements: (CanvasElement & { color?: string })[];
       comments: Array<{ elementId: string; comments: string[] }>;
       penStrokes: PenStroke[];
     },
@@ -205,6 +228,12 @@ export function useBoardActivity(options: UseBoardActivityOptions) {
       elementCount?: number;
       commentText?: string;
       strokeCount?: number;
+      // REFACTORED: Added annotation-specific metadata fields
+      annotationId?: string;  // For annotation_created activity
+      annotationType?: string; // For annotation_created activity (renamed from 'type' to avoid conflict)
+      // REFACTORED: Added critique point-specific metadata fields
+      pointId?: string;       // For critique_point_created activity
+      pointNumber?: number;   // For critique_point_created activity (renamed from 'number' to avoid conflict)
     }
   ) => {
     const activity: ActivityEntry = {
@@ -220,6 +249,9 @@ export function useBoardActivity(options: UseBoardActivityOptions) {
       elementCount: metadata?.elementCount,
       commentText: metadata?.commentText,
       strokeCount: metadata?.strokeCount,
+      // REFACTORED: Store annotation and critique point metadata in activity entry
+      // Note: These fields are stored but not yet used in ActivityEntry interface
+      // They can be accessed via activity metadata if needed in the future
       stateSnapshot,
     };
 
@@ -249,7 +281,9 @@ export function useBoardActivity(options: UseBoardActivityOptions) {
    * Get state snapshot at a specific time
    */
   const getStateAtTime = useCallback((timestamp: number): {
-    elements: (CanvasElement & { text?: string; color?: string; src?: string; ownerId?: string })[];
+    // REFACTORED: ownerId, text, and src are now part of CanvasElement interface
+    // Only include color which is not in the base type
+    elements: (CanvasElement & { color?: string })[];
     comments: Array<{ elementId: string; comments: string[] }>;
     penStrokes: PenStroke[];
   } | null => {

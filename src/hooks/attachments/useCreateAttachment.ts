@@ -39,7 +39,8 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { Attachment } from './useAttachments';
 
-interface CreateAttachmentOptions {
+// REFACTORED: Exported interfaces for use in other files
+export interface CreateAttachmentOptions {
   file: File;
   boardId: string;
   commentId?: string | null; // Optional: link attachment to a comment
@@ -48,7 +49,7 @@ interface CreateAttachmentOptions {
   // NOTE: Storage bucket is ALWAYS "attachments" - cannot be overridden
 }
 
-interface UseCreateAttachmentResult {
+export interface UseCreateAttachmentResult {
   createAttachment: (options: CreateAttachmentOptions) => Promise<Attachment | null>;
   loading: boolean;
   error: string | null;
@@ -242,50 +243,56 @@ export function useCreateAttachment(): UseCreateAttachmentResult {
         console.error('❌ Storage upload failed:', uploadError);
         console.error('❌ Upload error details:', {
           message: uploadError.message,
-          statusCode: uploadError.statusCode,
+          statusCode: (uploadError as any).statusCode, // REFACTORED: StorageError may not have statusCode
           name: uploadError.name,
           error: uploadError,
         });
         
         // Determine specific error type and provide helpful error messages
+        // REFACTORED: Single declaration of errorMessage - declared once with let so it can be reassigned
         let errorMessage = 'Failed to upload file to storage';
         let errorDetails = '';
         
-        if (uploadError.message) {
-          errorMessage += `: ${uploadError.message}`;
+        // REFACTORED: Handle StorageError without statusCode property
+        // StorageError may not have statusCode, so check message and error properties instead
+        const statusCode = (uploadError as any).statusCode;
+        // REFACTORED: Reassign errorMessage (no let/const/var) - use uploadError.message or uploadError.error
+        const uploadErrorMessage = uploadError.message || (uploadError as any).error || '';
+        if (uploadErrorMessage) {
+          errorMessage = uploadErrorMessage; // Reassign instead of appending
         }
         
         // Check for common error scenarios
-        if (uploadError.message?.toLowerCase().includes('bucket') || 
-            uploadError.message?.toLowerCase().includes('not found') ||
-            uploadError.statusCode === 404) {
+        if (errorMessage.toLowerCase().includes('bucket') || 
+            errorMessage.toLowerCase().includes('not found') ||
+            statusCode === 404) {
           errorMessage = `Storage bucket "${STORAGE_BUCKET_NAME}" not found`;
           errorDetails = `The "${STORAGE_BUCKET_NAME}" bucket does not exist in your Supabase project. Please create it in the Supabase Dashboard → Storage → Create Bucket, and set it to public.`;
-        } else if (uploadError.message?.toLowerCase().includes('permission') ||
-                   uploadError.message?.toLowerCase().includes('forbidden') ||
-                   uploadError.statusCode === 403) {
+        } else if (errorMessage.toLowerCase().includes('permission') ||
+                   errorMessage.toLowerCase().includes('forbidden') ||
+                   statusCode === 403) {
           errorMessage = 'Permission denied: Cannot upload to storage bucket';
           errorDetails = `You do not have permission to upload files to the "${STORAGE_BUCKET_NAME}" bucket. Please check your Supabase Storage policies (RLS) or bucket permissions.`;
-        } else if (uploadError.message?.toLowerCase().includes('duplicate') ||
-                   uploadError.message?.toLowerCase().includes('already exists')) {
+        } else if (errorMessage.toLowerCase().includes('duplicate') ||
+                   errorMessage.toLowerCase().includes('already exists')) {
           errorMessage = 'File already exists in storage';
           errorDetails = 'A file with this name already exists in the storage bucket. Please try uploading with a different filename.';
-        } else if (uploadError.message?.toLowerCase().includes('size') ||
-                   uploadError.message?.toLowerCase().includes('too large')) {
+        } else if (errorMessage.toLowerCase().includes('size') ||
+                   errorMessage.toLowerCase().includes('too large')) {
           errorMessage = 'File too large for storage';
           errorDetails = `The file size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds the maximum allowed size for the storage bucket.`;
-        } else if (uploadError.message?.toLowerCase().includes('network') ||
-                   uploadError.message?.toLowerCase().includes('timeout')) {
+        } else if (errorMessage.toLowerCase().includes('network') ||
+                   errorMessage.toLowerCase().includes('timeout')) {
           errorMessage = 'Network error during file upload';
           errorDetails = 'Failed to upload file due to a network error. Please check your internet connection and try again.';
         } else {
-          errorDetails = uploadError.message || 'Unknown storage error occurred';
+          errorDetails = errorMessage || 'Unknown storage error occurred';
         }
         
         console.error('❌ Error diagnosis:', {
           errorMessage,
           errorDetails,
-          statusCode: uploadError.statusCode,
+          statusCode: statusCode,
         });
         
         const finalErrorMessage = errorDetails 
@@ -440,7 +447,7 @@ export function useCreateAttachment(): UseCreateAttachmentResult {
             console.error('❌ Failed to clean up uploaded file:', deleteError);
             console.error('❌ Cleanup error details:', {
               message: deleteError.message,
-              statusCode: deleteError.statusCode,
+              statusCode: (deleteError as any).statusCode, // REFACTORED: StorageError may not have statusCode
             });
             errorMessage += ` (File uploaded to "${STORAGE_BUCKET_NAME}" bucket but attachment record creation failed. File may need manual cleanup at path: ${finalStoragePath})`;
           } else {

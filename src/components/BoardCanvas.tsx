@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, type Dispatch, type SetStateAction } from "react";
 import { Rnd } from "react-rnd";
 import type { CanvasElement, Comment } from "@/types";
 import type { ToolType } from "./CanvasToolbar";
@@ -15,7 +15,10 @@ interface BoardCanvasProps {
   elements: CanvasElement[];
   setElements: (elements: CanvasElement[]) => void;
   selectedIds: string[];
-  setSelectedIds: (ids: string[]) => void;
+  // REFACTORED: Changed from (ids: string[]) => void to Dispatch<SetStateAction<string[]>>
+  // This allows setSelectedIds to accept both direct values and updater functions,
+  // which is the standard React state setter pattern and matches how applySelection uses it
+  setSelectedIds: Dispatch<SetStateAction<string[]>>;
   activeTool: ToolType;
   onSetActiveTool?: (tool: ToolType) => void;
   selectedElementId?: string | null;

@@ -45,6 +45,8 @@ export default function SharePage({ params }: SharePageProps) {
 
         // Load comments from storage
         const storedComments = getComments(boardId);
+        // REFACTORED: Default category to "general" when stored comment has no category
+        // Comment type requires category to be a specific string literal, not undefined
         const commentsFromStorage: Comment[] = storedComments.map((stored) => ({
           id: stored.id,
           author: stored.authorName,
@@ -53,7 +55,7 @@ export default function SharePage({ params }: SharePageProps) {
           boardId: stored.boardId,
           pinId: stored.pinId || null,
           type: stored.type,
-          category: undefined,
+          category: stored.category || "general", // Default to "general" if category is missing
         }));
         if (commentsFromStorage.length > 0) {
           setComments(commentsFromStorage);

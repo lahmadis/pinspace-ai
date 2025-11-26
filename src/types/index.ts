@@ -8,19 +8,24 @@ export type Card = {
   imageUrl?: string; // Optional image URL
 };
 
-// Comment (unified type for pinned comments)
+// REFACTORED: Comment type updated to include ALL properties used across the codebase
+// This unified type supports both app usage and database schema fields
 export type Comment = {
   id: string;
   author: string;
   text: string;
-  timestamp: string;
+  // REFACTORED: timestamp can be number (Date.now()) or string (ISO timestamp) for flexibility
+  timestamp: number | string;
   boardId: string;
   category: "concept" | "plan" | "section" | "material" | "circulation" | "structure" | "general"; // Category for grouping
   
+  // REFACTORED: Added createdAt field (if different from timestamp)
+  createdAt?: number; // Timestamp in milliseconds (Date.now())
+  
   // Pin location - one of these 2 ways to anchor:
   elementId?: string | null;  // if pinned to a card/shape/etc (deprecated, use targetElementId)
-  x?: number;                 // if it's a free pin on the canvas
-  y?: number;
+  x?: number | null;         // if it's a free pin on the canvas (for positioned comments)
+  y?: number | null;         // if it's a free pin on the canvas (for positioned comments)
   
   // Element targeting - which canvas element this comment is attached to
   targetElementId?: string | null; // if attached to a specific canvas element
@@ -31,6 +36,12 @@ export type Comment = {
   // Legacy fields (for backward compatibility)
   pinId?: string | null; // Optional pin/card ID for per-card comments (deprecated, use elementId)
   type?: "comment" | "crit"; // Type of comment (deprecated)
+  
+  // REFACTORED: Added database schema fields (snake_case from Supabase)
+  board_id?: string;      // Database field name (snake_case)
+  author_name?: string;    // Database field name (snake_case)
+  is_task?: boolean;      // Database field name (snake_case)
+  target_element_id?: string; // Database field name (snake_case)
 };
 
 // Alias for clarity
@@ -79,14 +90,18 @@ export type BoardTimelineSnapshot = {
   note: string;
 };
 
-// Task
+// REFACTORED: Task type updated to include all required properties
 export type Task = {
   id: string;
   boardId: string;
   text: string; // the thing to fix
   sourceCommentId?: string; // optional, the comment it came from
-  status: "open" | "done";
-  createdAt: string; // ISO timestamp
+  // REFACTORED: status can be "done" | "pending" | string for flexibility
+  status: "done" | "pending" | string;
+  // REFACTORED: Added done field (boolean alias for status === "done")
+  done?: boolean; // true if status === "done"
+  // REFACTORED: createdAt can be number (Date.now()) or string (ISO timestamp)
+  createdAt: number | string; // Timestamp (number) or ISO timestamp (string)
 };
 
 // Crit Session Summary
@@ -155,6 +170,28 @@ export type Board = {
   lastEdited?: string; // Last edited timestamp
 };
 
+// REFACTORED: Added StoredBoard type for localStorage persistence
+// This type matches the structure used in src/lib/storage.ts
+export type StoredBoard = {
+  id: string;
+  title: string;
+  lastEdited: string; // ISO timestamp
+  visibility: "Public" | "Private";
+  ownerUsername: string;
+  school?: string;
+  coverImage?: string;
+  coverColor?: string; // Pastel color for board cover
+  collaborators?: string[];
+};
+
+// REFACTORED: Added BoardData type export - extended board type that includes cards and comments
+// This type is used for board analysis and data operations
+export type BoardData = Board & {
+  cards: Card[];
+  comments: Comment[];
+  snapshots: BoardSnapshot[];
+};
+
 // Canvas Element Types
 export type ElementType = "card" | "text" | "sticky" | "shape" | "image";
 
@@ -197,4 +234,8 @@ export interface CanvasElement {
   // Legacy card bridge
   title?: string;
   body?: string;
+  
+  // REFACTORED: Added ownerId field for tracking element ownership and permissions
+  // Used for permission checking (canEdit, canDelete) in collaborative boards
+  ownerId?: string; // User ID of the element creator/owner
 }

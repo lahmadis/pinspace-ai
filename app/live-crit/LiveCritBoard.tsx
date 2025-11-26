@@ -2,7 +2,8 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import StickyNote, { StickyNoteData } from '@/components/sticky/StickyNote';
-import PenOverlay from '@/components/draw/PenOverlay';
+// REFACTORED: Replaced PenOverlay (doesn't exist) with PenTool component
+import PenTool from '@/components/draw/PenTool';
 // (We won't use the PenToolbar component for now to avoid any z-index/import confusion)
 // import PenToolbar from '@/components/draw/PenToolbar';
 import { DrawTool, PEN_COLORS, PEN_SIZES, PenColor, PenSize } from '@/lib/draw';
@@ -83,14 +84,23 @@ export default function LiveCritBoard() {
     source: 'liveCrit' // Only show live crit session comments (filters at API level)
   });
 
+  // REFACTORED: Fixed scope issue - s is only available inside state updater function
+  // Check if selectedId changed by comparing with current state before updating
+  // Clear comment text and errors only when selection actually changes
   const setSelected = useCallback((id: string | null) => {
+    // Check if selection is actually changing by comparing with current state
+    // This avoids the scope issue where s was referenced outside the updater function
+    const selectionChanged = id !== state.selectedId;
+    
+    // Update state
     setState((s) => ({ ...s, selectedId: id }));
+    
     // Clear comment text and errors when selection changes
-    if (id !== s.selectedId) {
+    if (selectionChanged) {
       setCommentText('');
       setElementIdError(null);
     }
-  }, []);
+  }, [state.selectedId]);
 
   const handleChangeText = useCallback((id: string, text: string) => {
     setState((s) => {
@@ -301,13 +311,21 @@ export default function LiveCritBoard() {
             </div>
             {/* ==== END TEMP INLINE PEN TOOLBAR ==== */}
 
-            {/* Drawing overlay */}
-            <PenOverlay
-              tool={tool}
-              color={penColor}
-              size={penSize}
+            {/* REFACTORED: Replaced PenOverlay with PenTool component
+                - Changed tool prop to activeTool (PenTool expects "pen" | "eraser" | null)
+                - Changed color prop to penColor
+                - Changed size prop to penWidth (for pen) and eraserSize (for eraser)
+                - PenTool handles both pen and eraser modes based on activeTool
+            */}
+            <PenTool
+              activeTool={tool === 'pen' ? 'pen' : tool === 'eraser' ? 'eraser' : null}
+              penColor={penColor}
+              penWidth={penSize}
+              eraserSize={penSize}
               boardId={boardId}
               className="absolute inset-0 z-20"
+              pan={{ x: 0, y: 0 }}
+              zoom={1}
             />
 
             {/* Sticky notes */}

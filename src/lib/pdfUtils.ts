@@ -14,6 +14,8 @@ export interface PDFPageImage {
 if (typeof window !== "undefined") {
   // Initialize worker configuration when module loads (similar to react-pdf pattern)
   // This ensures the worker is configured before any PDF operations
+  // REFACTORED: Added type ignore for pdfjs-dist dynamic import
+  // @ts-ignore - pdfjs-dist types may not be fully compatible
   import("pdfjs-dist/build/pdf.mjs").then((pdfjs) => {
     pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
   }).catch(() => {
@@ -30,7 +32,9 @@ async function getPdfjsLib() {
   }
 
   if (!pdfjsLib) {
-    // Dynamic import of pdfjs-dist
+    // REFACTORED: Added type ignore for pdfjs-dist dynamic import
+    // pdfjs-dist types may not be fully compatible, so we use @ts-ignore
+    // @ts-ignore - pdfjs-dist types may not be fully compatible
     pdfjsLib = await import("pdfjs-dist/build/pdf.mjs");
     
     // Configure worker path - use local worker file

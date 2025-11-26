@@ -72,18 +72,21 @@ export default async function handler(req, res) {
       // - UUID element IDs (stored in element_id)
       // - Non-UUID element IDs (stored in element_id_text, e.g., "pdf_page_...")
       // ========================================================================
+      // REFACTORED: Removed duplicate require - using imported functions from top of file
       if (elementId) {
-        // Normalize the element ID (strip prefixes)
-        const { normalizeElementId, isValidUUID } = require('./_helpers/uuidValidator');
-        const normalizedId = normalizeElementId(elementId);
-        const isUUID = normalizedId && isValidUUID(normalizedId);
-        
-        if (isUUID) {
-          // UUID ID - check element_id column (and target_element_id for backward compatibility)
-          query = query.or(`element_id.eq.${normalizedId},target_element_id.eq.${normalizedId}`);
-        } else {
-          // Non-UUID ID - check element_id_text column
-          query = query.eq('element_id_text', normalizedId);
+        // Normalize the element ID (strip prefixes) using imported function
+        const validation = validateAndNormalizeElementId(elementId);
+        if (validation.valid && validation.normalizedId) {
+          const normalizedId = validation.normalizedId;
+          const isUUID = validation.isUUID;
+          
+          if (isUUID) {
+            // UUID ID - check element_id column (and target_element_id for backward compatibility)
+            query = query.or(`element_id.eq.${normalizedId},target_element_id.eq.${normalizedId}`);
+          } else {
+            // Non-UUID ID - check element_id_text column
+            query = query.eq('element_id_text', normalizedId);
+          }
         }
       }
 

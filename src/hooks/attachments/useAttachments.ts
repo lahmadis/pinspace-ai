@@ -34,14 +34,15 @@ export interface Attachment {
   updatedAt: string;
 }
 
-interface UseAttachmentsOptions {
+// REFACTORED: Exported interfaces for use in other files
+export interface UseAttachmentsOptions {
   boardId?: string | null;
   commentId?: string | null;
   enabled?: boolean; // Whether to fetch automatically (default: true)
   pollInterval?: number; // Polling interval in milliseconds (default: 5000)
 }
 
-interface UseAttachmentsResult {
+export interface UseAttachmentsResult {
   attachments: Attachment[];
   loading: boolean;
   error: string | null;

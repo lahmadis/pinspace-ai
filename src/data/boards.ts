@@ -1,14 +1,8 @@
 // Shared in-memory board data store
 // This file contains all boards with their cards, comments, and metadata
+// REFACTORED: BoardData type is now exported from @/types for consistency
 
-import type { Card, Comment, Board, BoardSnapshot } from "@/types";
-
-// Extended board type that includes cards and comments
-export type BoardData = Board & {
-  cards: Card[];
-  comments: Comment[];
-  snapshots: import("@/types").BoardSnapshot[];
-};
+import type { BoardData } from "@/types";
 
 // In-memory boards array - this is the single source of truth
 export const boards: BoardData[] = [
@@ -52,6 +46,7 @@ export const boards: BoardData[] = [
         text: "The reflective facade is interesting, but you still haven't explained how structure is actually holding it up.",
         timestamp: "2h ago",
         boardId: "1",
+        category: "structure", // REFACTORED: Added missing category field
         pinId: null,
       },
       {
@@ -60,6 +55,7 @@ export const boards: BoardData[] = [
         text: "Circulation spine is strong. Don't lose that in plan.",
         timestamp: "5h ago",
         boardId: "1",
+        category: "circulation", // REFACTORED: Added missing category field
         pinId: null,
       },
     ],

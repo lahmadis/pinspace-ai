@@ -1,5 +1,6 @@
 // Board analysis utility for generating crit summaries
 // This uses mock/simplified logic - not connected to external AI APIs
+// REFACTORED: BoardData is now exported from @/types instead of @/data/boards
 
 import type { Comment, BoardSnapshot, BoardData } from "@/types";
 

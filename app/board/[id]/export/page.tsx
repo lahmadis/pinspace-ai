@@ -7,9 +7,11 @@ interface ExportPageProps {
 }
 
 // Server-side fetch helper to get board data
+// REFACTORED: Fixed TypeScript error - headers() returns a Promise in Next.js 15+ and must be awaited
 async function getBoardData(boardId: string, snapshotId?: string | null) {
   try {
-    const headersList = headers();
+    // REFACTORED: Await headers() call - in Next.js 15+, headers() returns Promise<ReadonlyHeaders>
+    const headersList = await headers();
     const host = headersList.get("host");
     const protocol = headersList.get("x-forwarded-proto") || "http";
     const baseUrl = host ? `${protocol}://${host}` : "http://localhost:3000";
@@ -101,9 +103,10 @@ export default async function ExportPage({
   // Get recent comments for Key Feedback section (last 5)
   const recentComments = comments
     .sort((a, b) => {
-      // Simple sort by timestamp (newer first)
-      // In a real app, you'd parse timestamps properly
-      return a.timestamp.localeCompare(b.timestamp);
+      // REFACTORED: Use numeric comparison instead of localeCompare
+      // timestamp can be string | number, so convert both to numbers for comparison
+      // This works whether timestamps are stored as strings (ISO) or numbers (Date.now())
+      return Number(a.timestamp) - Number(b.timestamp);
     })
     .slice(0, 5)
     .reverse(); // Show oldest first for context

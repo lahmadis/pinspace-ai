@@ -125,7 +125,9 @@ function validateAndNormalizeElementId(id) {
   };
 }
 
-module.exports = {
+// REFACTORED: Converted to ES6 exports to match responseHelper.js pattern
+// This allows consistent ES6 import syntax in Next.js API routes
+export {
   isValidUUID,
   stripElementIdPrefix,
   normalizeElementId,

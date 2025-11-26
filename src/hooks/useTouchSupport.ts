@@ -52,12 +52,15 @@ export function useTouchSupport(options: UseTouchSupportOptions = {}) {
 
   /**
    * Get touch coordinates relative to element
+   * REFACTORED: Changed parameter from Touch to React.Touch to match React.TouchEvent
    */
-  const getTouchCoordinates = useCallback((touch: Touch, element: HTMLElement) => {
+  const getTouchCoordinates = useCallback((touch: React.Touch, element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
     return {
       x: touch.clientX - rect.left,
       y: touch.clientY - rect.top,
+      // REFACTORED: Added identifier property to match TouchPoint interface
+      identifier: touch.identifier,
     };
   }, []);
 
@@ -73,7 +76,12 @@ export function useTouchSupport(options: UseTouchSupportOptions = {}) {
 
     touches.forEach(touch => {
       const coords = getTouchCoordinates(touch, element);
-      activeTouches.current.set(touch.identifier, coords);
+      // REFACTORED: Store full TouchPoint with identifier
+      activeTouches.current.set(touch.identifier, {
+        x: coords.x,
+        y: coords.y,
+        identifier: coords.identifier,
+      });
 
       if (onTouchStart) {
         onTouchStart(coords.x, coords.y, touch.identifier);
@@ -93,7 +101,12 @@ export function useTouchSupport(options: UseTouchSupportOptions = {}) {
 
     touches.forEach(touch => {
       const coords = getTouchCoordinates(touch, element);
-      activeTouches.current.set(touch.identifier, coords);
+      // REFACTORED: Store full TouchPoint with identifier
+      activeTouches.current.set(touch.identifier, {
+        x: coords.x,
+        y: coords.y,
+        identifier: coords.identifier,
+      });
 
       if (onTouchMove) {
         onTouchMove(coords.x, coords.y, touch.identifier);

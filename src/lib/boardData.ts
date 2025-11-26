@@ -29,10 +29,11 @@ export const INITIAL_CARDS: Card[] = [
   },
 ];
 
+// REFACTORED: Added await before headers() call - in Next.js 15+, headers() returns Promise<ReadonlyHeaders>
 // Get base URL for server-side fetch
-function getBaseUrl(): string {
+async function getBaseUrl(): Promise<string> {
   try {
-    const headersList = headers();
+    const headersList = await headers();
     const host = headersList.get("host");
     const protocol = headersList.get("x-forwarded-proto") || "http";
     if (host) {
@@ -55,7 +56,7 @@ export async function getCommentsForBoard(
   options?: { elementId?: string; source?: string }
 ): Promise<Comment[]> {
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = await getBaseUrl();
     
     // Build query parameters
     const params = new URLSearchParams({ boardId });
@@ -89,7 +90,7 @@ export async function getSnapshotsForBoard(
   boardId: string
 ): Promise<Snapshot[]> {
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = await getBaseUrl();
     const res = await fetch(`${baseUrl}/api/snapshots`, {
       cache: "no-store",
       headers: {

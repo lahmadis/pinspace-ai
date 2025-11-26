@@ -1136,8 +1136,9 @@ function BoardPageContent({ boardId }: { boardId: string }) {
         setElements(storedElements || []);
       }
 
-      // Load comments from unified storage (comments are loaded via the useEffect above)
-      // This is just for initial load - the useEffect handles live updates
+      // REFACTORED: Comments are loaded via useComments hook (Supabase API)
+      // The useComments hook automatically fetches from Supabase and syncs to comments state
+      // No need to load from localStorage - Supabase is the source of truth
 
       // Priority: Use elements if they exist
       if (storedElements && storedElements.length > 0) {
@@ -1211,14 +1212,19 @@ function BoardPageContent({ boardId }: { boardId: string }) {
         }
       }
 
+      // REFACTORED: Removed getComments(boardId) call - comments are loaded via useComments hook
+      // The useComments hook automatically fetches from Supabase API and updates commentsFromApi
+      // The useEffect above syncs commentsFromApi to the local comments state
+      // No need to manually fetch or merge - the hook handles everything
       const commentsRes = await fetch(`/api/comments?boardId=${boardId}`);
       if (commentsRes.ok) {
         const commentsData = await commentsRes.json();
-        const apiComments = commentsData.comments || [];
+        const apiComments = commentsData.data || commentsData.comments || [];
         if (apiComments.length > 0) {
-          // Merge API comments with storage (API takes precedence if both exist)
-          // Load current comments from unified storage
-          const currentComments = normalizeBoardComments(getComments(boardId));
+          // REFACTORED: Use current comments state instead of getComments(boardId)
+          // Comments are already loaded via useComments hook and synced to comments state
+          // Just merge API comments with current comments state (API takes precedence)
+          const currentComments = comments; // Use existing comments state from useComments hook
           const mergedComments = [...currentComments];
           apiComments.forEach((apiComment: Comment) => {
             const existingIndex = mergedComments.findIndex((c) => c.id === apiComment.id);
@@ -2113,6 +2119,33 @@ function BoardPageContent({ boardId }: { boardId: string }) {
                   setComments(prev => [newComment, ...prev]);
                   setSelectedCommentId(newComment.id);
 
+                  // REFACTORED: Moved task creation inside if (newComment) block
+                  // Task should only be created if comment was successfully created
+                  // If makeTask is true, also create a task
+                  if (commentData.task) {
+                    const newTask: Task = {
+                      id: `task_${Date.now()}`,
+                      boardId,
+                      text: commentData.text,
+                      sourceCommentId: newComment.id, // Now newComment is in scope
+                      status: "open",
+                      createdAt: new Date().toISOString(),
+                    };
+                    const updatedTasks = [newTask, ...tasks];
+                    setTasks(updatedTasks);
+                    saveTasks(
+                      boardId,
+                      updatedTasks.map((t) => ({
+                        id: t.id,
+                        boardId: t.boardId,
+                        text: t.text,
+                        sourceCommentId: t.sourceCommentId,
+                        status: t.status,
+                        createdAt: t.createdAt,
+                      }))
+                    );
+                  }
+
                   // Update lastEdited timestamp
                   updateBoardLastEdited(boardId, new Date().toISOString());
                 } else {
@@ -2144,33 +2177,6 @@ function BoardPageContent({ boardId }: { boardId: string }) {
                 // Refresh comments from API to ensure sync
                 await refetchComments();
               }
-              
-              // If makeTask is true, also create a task
-              if (commentData.task) {
-                const newTask: Task = {
-                  id: `task_${Date.now()}`,
-                  boardId,
-                  text: commentData.text,
-                  sourceCommentId: newComment.id,
-                  status: "open",
-                  createdAt: new Date().toISOString(),
-                };
-                const updatedTasks = [newTask, ...tasks];
-                setTasks(updatedTasks);
-                saveTasks(
-                  boardId,
-                  updatedTasks.map((t) => ({
-                    id: t.id,
-                    boardId: t.boardId,
-                    text: t.text,
-                    sourceCommentId: t.sourceCommentId,
-                    status: t.status,
-                    createdAt: t.createdAt,
-                  }))
-                );
-              }
-              
-              updateBoardLastEdited(boardId, new Date().toISOString());
             }}
             boardId={boardId}
             currentUserName={currentUser.name}

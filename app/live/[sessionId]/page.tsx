@@ -56,8 +56,10 @@ function extractBoardIdFromSessionId(sessionId: string): string | null {
 }
 
 export default function LiveSessionPage() {
+  // REFACTORED: Safely handle null params from useParams
+  // useParams can return null, so we need to handle that case
   const params = useParams<{ sessionId: string }>();
-  const sessionId = params.sessionId as string;
+  const sessionId = params?.sessionId as string | undefined;
 
   // ========================================================================
   // REFACTORED: hostBoardId is no longer derived from sessionId
@@ -388,10 +390,12 @@ export default function LiveSessionPage() {
   // This removes the circular dependency where we needed boardId to fetch session,
   // but needed session to get boardId. Now we always fetch session first.
   // ========================================================================
+  // REFACTORED: Early return if sessionId is missing (handles null params case)
+  // This ensures we don't proceed with undefined sessionId
   useEffect(() => {
-    // Early return if sessionId is missing
+    // Early return if sessionId is missing (params was null or sessionId is undefined)
     if (!sessionId) {
-      console.error('[live] ❌ No session ID provided in URL');
+      console.error('[live] ❌ No session ID provided in URL (params may be null)');
       setSessionValid(false);
       setSessionError('No session ID provided in URL. Please use a valid crit session link.');
       setSessionLoading(false);

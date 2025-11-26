@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import SidebarNav from "@/components/SidebarNav";
-import CanvasToolbar from "@/components/CanvasToolbar"; // your existing toolbar
+import CanvasToolbar, { type ToolType } from "@/components/CanvasToolbar"; // REFACTORED: Import ToolType to ensure activeTool is always valid
 import BoardCanvas from "@/components/BoardCanvas";      // KEEP your existing canvas
 import CritCommentsPanel from "@/components/CritCommentsPanel"; // replaced in step 2
 // REFACTORED: Removed unnecessary defensive checks - getBoardById is exported from @/lib/storage
@@ -34,8 +34,10 @@ export default function BoardPage() {
   const params = useParams<{ boardId: string }>();
   const boardId = (params?.boardId as string) || "";
 
-  // left toolbar state (mirrors what you already use)
-  const [activeTool, setActiveTool] = useState<Parameters<typeof CanvasToolbar>[0]["activeTool"]>("select");
+  // REFACTORED: Ensure activeTool is always a valid ToolType (not undefined)
+  // BoardCanvas requires activeTool to be ToolType (non-optional)
+  // Initialize with "select" as default to ensure it's never undefined
+  const [activeTool, setActiveTool] = useState<ToolType>("select");
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [snap, setSnap] = useState(false);
@@ -103,16 +105,21 @@ export default function BoardPage() {
             {/* Canvas toolbar (left vertical) */}
             <div className="flex">
               <div className="w-36 border-r bg-white">
+                {/* REFACTORED: Updated CanvasToolbar props to match CanvasToolbarProps interface
+                    - Changed setActiveTool to onToolChange
+                    - Changed setZoom to onZoomIn/onZoomOut/onZoomReset callbacks
+                    - Changed setSnap to onSnapToggle callback
+                    - Removed pan/setPan (not used by CanvasToolbar component)
+                */}
                 <CanvasToolbar
                   activeTool={activeTool}
-                  setActiveTool={setActiveTool}
+                  onToolChange={setActiveTool}
                   zoom={zoom}
-                  setZoom={setZoom}
-                  pan={pan}
-                  setPan={setPan}
+                  onZoomIn={() => setZoom(Math.min(3, zoom * 1.1))}
+                  onZoomOut={() => setZoom(Math.max(0.1, zoom / 1.1))}
+                  onZoomReset={() => setZoom(1)}
                   snap={snap}
-                  setSnap={setSnap}
-                  // keep your existing buttons/labels
+                  onSnapToggle={() => setSnap(prev => !prev)}
                 />
                 <div className="px-3 py-3">
                   <Link

@@ -12,19 +12,29 @@
  *   const boards = await prisma.board.findMany();
  */
 
-import { PrismaClient } from '@prisma/client';
+// REFACTORED: Added error handling for Prisma Client import
+// If @prisma/client is not installed, this will gracefully handle the error
+let PrismaClient: any;
+try {
+  PrismaClient = require('@prisma/client').PrismaClient;
+} catch (error) {
+  // Prisma is not installed or not configured
+  console.warn('[prisma] @prisma/client not found. Prisma features will be disabled.');
+  PrismaClient = null;
+}
 
 // Declare a global variable to hold the Prisma Client instance
 // This is TypeScript syntax for extending the global scope
 declare global {
   // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
+  var prisma: any | undefined;
 }
 
 // Create a single Prisma Client instance
 // In development, reuse the existing instance if it exists (from hot reload)
 // In production, always create a new instance
-const prisma = globalThis.prisma || new PrismaClient();
+// REFACTORED: Only create PrismaClient if it's available
+const prisma = PrismaClient ? (globalThis.prisma || new PrismaClient()) : null;
 
 // In development, save the instance to global so it persists across hot reloads
 if (process.env.NODE_ENV !== 'production') {

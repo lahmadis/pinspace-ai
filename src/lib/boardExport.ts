@@ -21,7 +21,9 @@ import type { PenStroke } from "@/hooks/usePenDrawing";
  * Board state for export
  */
 export interface BoardExportState {
-  elements: (CanvasElement & { text?: string; color?: string; src?: string; ownerId?: string })[];
+  // REFACTORED: ownerId, text, and src are now part of CanvasElement interface
+  // Only include color which is not in the base type
+  elements: (CanvasElement & { color?: string })[];
   comments: Array<{ elementId: string; comments: string[] }>;
   penStrokes: PenStroke[];
   boardWidth: number;
@@ -31,6 +33,7 @@ export interface BoardExportState {
 
 /**
  * Export options
+ * REFACTORED: Added boardBackground field to ExportOptions interface
  */
 export interface ExportOptions {
   format: "png" | "jpeg" | "svg" | "pdf";
@@ -38,6 +41,7 @@ export interface ExportOptions {
   includeComments?: boolean; // Include comment annotations in export
   includeMetadata?: boolean; // Include board metadata in export
   filename?: string;
+  boardBackground?: string; // Background color for board export (e.g., "#ffffff")
 }
 
 /**
