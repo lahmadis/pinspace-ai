@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* ============================================================================
+   ACCESSIBILITY STYLES
+   ============================================================================ */
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Focus indicators - High contrast for accessibility */
+*:focus-visible {
+  outline: 3px solid;
+  outline-offset: 2px;
+}
+
+[data-theme="light"] *:focus-visible {
+  outline-color: #2563eb; /* Blue */
+}
+
+[data-theme="dark"] *:focus-visible {
+  outline-color: #60a5fa; /* Light blue */
+}
+
+[data-theme="high-contrast"] *:focus-visible {
+  outline-color: #ffff00; /* Yellow for maximum contrast */
+  outline-width: 4px;
+}
+
+/* Skip link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #000;
+  color: #fff;
+  padding: 8px;
+  text-decoration: none;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* High contrast mode adjustments */
+[data-theme="high-contrast"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #000000;
+  --text-primary: #000000;
+  --text-secondary: #ffffff;
+  --border-color: #000000;
+}
+
+[data-theme="high-contrast"] .bg-white {
+  background-color: #ffffff !important;
+}
+
+[data-theme="high-contrast"] .bg-gray-50 {
+  background-color: #ffffff !important;
+}
+
+[data-theme="high-contrast"] .bg-gray-100 {
+  background-color: #f0f0f0 !important;
+}
+
+[data-theme="high-contrast"] .text-gray-900 {
+  color: #000000 !important;
+}
+
+[data-theme="high-contrast"] .text-gray-700 {
+  color: #000000 !important;
+}
+
+[data-theme="high-contrast"] .border-gray-300 {
+  border-color: #000000 !important;
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+/* Mobile-first responsive breakpoints */
+@media (max-width: 640px) {
+  /* Mobile styles */
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* Tablet styles */
+}
+
+@media (min-width: 1025px) {
+  /* Desktop styles */
+}
+
+/* Touch-friendly tap targets (minimum 44x44px) */
+@media (pointer: coarse) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Range slider styles */
+input[type="range"].slider {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+input[type="range"].slider::-webkit-slider-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+}
+
+input[type="range"].slider::-webkit-slider-thumb:active {
+  background: #1d4ed8;
+  transform: scale(1.05);
+}
+
+input[type="range"].slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+input[type="range"].slider::-moz-range-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+}
+
+input[type="range"].slider::-moz-range-thumb:active {
+  background: #1d4ed8;
+  transform: scale(1.05);
+}

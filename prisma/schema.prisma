@@ -1,0 +1,126 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User model - represents users of the application
+model User {
+  id        String  @id @default(cuid())
+  email     String? @unique
+  username  String  @unique
+  name      String
+  avatarUrl String?
+  bio       String?
+  isPrivate Boolean @default(false)
+  school    String?
+
+  // Relations - boards this user owns
+  ownedBoards Board[] @relation("BoardOwner")
+
+  // Relations - boards this user collaborates on
+  collaboratedBoards BoardCollaborator[] @relation("BoardCollaborator")
+
+  // Relations - comments this user created
+  comments Comment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// Board model - represents critique boards/projects
+model Board {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  visibility  String  @default("private")
+  ownerId     String
+  owner       User    @relation("BoardOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Relations - collaborators on this board (explicit relation name fix)
+  collaborators BoardCollaborator[] @relation("BoardCollaborators")
+
+  // Relations - comments on this board
+  comments    Comment[]
+  // Relations - attachments on this board
+  attachments Attachment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("boards")
+}
+
+// BoardCollaborator - many-to-many relationship between Users and Boards
+model BoardCollaborator {
+  id      String @id @default(cuid())
+  boardId String
+  userId  String
+
+  // Relation to Board model (explicit relation name fix)
+  board Board @relation("BoardCollaborators", fields: [boardId], references: [id], onDelete: Cascade)
+  // Relation to User model
+  user  User  @relation("BoardCollaborator", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([boardId, userId])
+  @@map("board_collaborators")
+}
+
+// Comment model - represents critique comments/pins on a board
+model Comment {
+  id              String  @id @default(cuid())
+  text            String
+  category        String?
+  x               Float?
+  y               Float?
+  targetElementId String?
+
+  // Relations - board this comment belongs to
+  boardId String
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  // Relations - user who created this comment
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  task   Boolean @default(false)
+  source String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("comments")
+}
+
+// Attachment model - represents files (images, PDFs, etc.) attached to a board
+model Attachment {
+  id       String @id @default(cuid())
+  filename String
+  fileUrl  String
+  fileType String
+  fileSize Int?
+  x        Float?
+  y        Float?
+  width    Float?
+  height   Float?
+
+  // Relations - board this attachment belongs to
+  boardId String
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  caption String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("attachments")
+}

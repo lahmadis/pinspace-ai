@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Generated files
+*.min.js
+*.min.css
+coverage/
+.vercel/
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Config files that shouldn't be formatted
+*.config.js
+*.config.ts
+*.config.mjs
+
+# Documentation
+*.md
+
+# Public assets
+public/
+
+
+
+
+
+
