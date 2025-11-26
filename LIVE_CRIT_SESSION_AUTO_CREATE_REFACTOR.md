@@ -252,3 +252,4 @@ Step 1: Fetch session from Supabase
 5. **Flexibility:** Handles edge cases (inactive sessions, race conditions, missing boardId)
 
 
+

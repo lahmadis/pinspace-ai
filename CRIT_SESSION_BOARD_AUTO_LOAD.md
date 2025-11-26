@@ -222,3 +222,4 @@ useEffect(() => {
 Refactored the crit session logic to always fetch the session first and extract the `board_id` from the session response. This eliminates the circular dependency, ensures the board always loads automatically, and removes the need for manual board selection. The board is now always loaded from the session's `board_id`, ensuring consistency and a better user experience.
 
 
+

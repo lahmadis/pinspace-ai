@@ -171,3 +171,4 @@ const handleDeleteComment = useCallback(async (commentId: string) => {
 1. `app/live/[sessionId]/page.tsx` - Fixed all useEffect dependency arrays
 
 
+

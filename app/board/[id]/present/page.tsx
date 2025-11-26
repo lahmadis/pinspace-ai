@@ -8,19 +8,14 @@ import SidebarNav from "@/components/SidebarNav";
 import CanvasToolbar from "@/components/CanvasToolbar"; // your existing toolbar
 import BoardCanvas from "@/components/BoardCanvas";      // KEEP your existing canvas
 import CritCommentsPanel from "@/components/CritCommentsPanel"; // replaced in step 2
-import { getBoards, getBoardById, type StoredBoard } from "@/lib/storage"; // safe if you have them
+// REFACTORED: Removed unnecessary defensive checks - getBoardById is exported from @/lib/storage
+import { getBoardById, type StoredBoard } from "@/lib/storage";
 import { timeAgo } from "@/lib/time";
 
-// If you don’t have this exact helper, the page still works without it.
-// It’s only used to show last edited nicety.
+// Helper to get board data for displaying last edited time
 function safeGetBoard(boardId: string): StoredBoard | null {
   try {
-    const b = getBoardById ? getBoardById(boardId) : null;
-    if (b) return b;
-  } catch {}
-  try {
-    const all = getBoards?.() ?? [];
-    return all.find((x: any) => x.id === boardId) ?? null;
+    return getBoardById(boardId);
   } catch {
     return null;
   }

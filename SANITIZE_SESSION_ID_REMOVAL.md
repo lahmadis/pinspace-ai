@@ -180,3 +180,4 @@ const channel = supabase.channel(`crit-guest-${sessionId}`);
 - **No Database Changes:** Schema already uses UUID type for `session_id`
 
 
+

@@ -247,3 +247,4 @@ CREATE POLICY "Anyone can update boards"
 - Both use `true` to allow all operations for public access
 
 
+

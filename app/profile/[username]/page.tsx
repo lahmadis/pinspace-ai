@@ -39,7 +39,9 @@ function getBoardObjects(boardIds: string[]): Array<{
         title: board.title,
         coverImage: getBoardCoverImage(board.id),
         lastEdited: board.lastEdited,
-        isPublic: board.isPublic || board.visibility === "public",
+        // REFACTORED: StoredBoard uses 'visibility' property, not 'isPublic'
+        // Convert visibility to boolean isPublic for UI consistency
+        isPublic: board.visibility?.toLowerCase() === "public",
       };
     })
     .filter((b): b is NonNullable<typeof b> => b !== null);

@@ -174,3 +174,4 @@ Ensure these are set:
 4. Consider adding presence tracking via Supabase Realtime presence
 
 
+

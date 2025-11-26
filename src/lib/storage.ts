@@ -99,6 +99,18 @@ export function getBoards(): StoredBoard[] {
   }
 }
 
+// Get a single board by ID
+// REFACTORED: Added missing getBoardById function that was being imported but didn't exist
+export function getBoardById(boardId: string): StoredBoard | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const boards = getBoards();
+    return boards.find((board) => board.id === boardId) || null;
+  } catch {
+    return null;
+  }
+}
+
 // Get all boards (alias for getBoards, matching the requested interface)
 export function getAllBoards(): StoredBoard[] {
   return getBoards();

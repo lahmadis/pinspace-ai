@@ -26,3 +26,4 @@ To migrate student board comments to the unified Supabase comments table:
 
 ⚠️ **TODO**: Student board comments migration is pending. Currently uses localStorage-based system.
 
+

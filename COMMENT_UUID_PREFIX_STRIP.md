@@ -180,3 +180,4 @@ targetElementId: null
 Refactored comment creation and update logic to automatically strip non-UUID prefixes from element IDs before storing in Supabase. This ensures all UUID fields contain only raw UUID strings, preventing invalid UUID format errors and ensuring data consistency in the database.
 
 
+
