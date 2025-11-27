@@ -1058,8 +1058,14 @@ function BoardPageContent({ boardId }: { boardId: string }) {
         boardId: t.boardId,
         text: t.text,
         sourceCommentId: t.sourceCommentId,
-        status: t.status,
-        createdAt: t.createdAt,
+        // REFACTORED: Ensure status is "open" | "done" for StoredTask type
+        // Task type allows "done" | "pending" | string, but StoredTask requires "open" | "done"
+        // Convert: if status is "done", keep it; otherwise default to "open"
+        status: (t.status === "done" ? "done" : "open") as "done" | "open",
+        // REFACTORED: Ensure createdAt is string for StoredTask type
+        // Task type allows createdAt as string | number, but StoredTask requires string
+        // Convert number to string, leave strings unchanged
+        createdAt: String(t.createdAt),
       }))
     );
 
@@ -1418,8 +1424,10 @@ function BoardPageContent({ boardId }: { boardId: string }) {
               boardId: t.boardId,
               text: t.text,
               sourceCommentId: t.sourceCommentId,
-              status: t.status,
-              createdAt: t.createdAt,
+              // REFACTORED: Ensure status is "open" | "done" for StoredTask type
+              status: (t.status === "done" || t.status === "open") ? t.status : "open",
+              // REFACTORED: Ensure createdAt is string for StoredTask type
+              createdAt: String(t.createdAt),
             }))
           );
         }
@@ -1561,8 +1569,10 @@ function BoardPageContent({ boardId }: { boardId: string }) {
         boardId: task.boardId,
         text: task.text,
         sourceCommentId: task.sourceCommentId,
-        status: task.status,
-        createdAt: task.createdAt,
+        // REFACTORED: Ensure status is "open" | "done" for StoredTask type
+        status: (task.status === "done" || task.status === "open") ? task.status : "open",
+        // REFACTORED: Ensure createdAt is string for StoredTask type
+        createdAt: String(task.createdAt),
       }))
     );
 
@@ -1589,7 +1599,8 @@ function BoardPageContent({ boardId }: { boardId: string }) {
         text: task.text,
         sourceCommentId: task.sourceCommentId,
         status: task.status as "open" | "done",
-        createdAt: task.createdAt,
+        // REFACTORED: Ensure createdAt is string for StoredTask type
+        createdAt: String(task.createdAt),
       }))
     );
 
@@ -1619,8 +1630,10 @@ function BoardPageContent({ boardId }: { boardId: string }) {
         boardId: task.boardId,
         text: task.text,
         sourceCommentId: task.sourceCommentId,
-        status: task.status,
-        createdAt: task.createdAt,
+        // REFACTORED: Ensure status is "open" | "done" for StoredTask type
+        status: (task.status === "done" || task.status === "open") ? task.status : "open",
+        // REFACTORED: Ensure createdAt is string for StoredTask type
+        createdAt: String(task.createdAt),
       }))
     );
 
@@ -2140,8 +2153,10 @@ function BoardPageContent({ boardId }: { boardId: string }) {
                         boardId: t.boardId,
                         text: t.text,
                         sourceCommentId: t.sourceCommentId,
-                        status: t.status,
-                        createdAt: t.createdAt,
+                        // REFACTORED: Ensure status is "open" | "done" for StoredTask type
+                        status: (t.status === "done" || t.status === "open") ? t.status : "open",
+                        // REFACTORED: Ensure createdAt is string for StoredTask type
+                        createdAt: String(t.createdAt),
                       }))
                     );
                   }

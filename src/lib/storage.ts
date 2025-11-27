@@ -345,8 +345,15 @@ export function updateBoardLastEdited(boardId: string, lastEdited: string): void
     if (boardIndex >= 0) {
       boards[boardIndex].lastEdited = lastEdited;
     } else {
-      // Create board entry if it doesn't exist
-      boards.push({ id: boardId, title: "Untitled Board", lastEdited });
+      // REFACTORED: Create board entry with all required StoredBoard fields
+      // StoredBoard requires: id, title, lastEdited, visibility, ownerUsername
+      boards.push({ 
+        id: boardId, 
+        title: "Untitled Board", 
+        lastEdited,
+        visibility: "Private", // Default to private
+        ownerUsername: "unknown" // Default owner
+      });
     }
     
     saveBoards(boards);

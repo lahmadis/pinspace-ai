@@ -465,7 +465,9 @@ export async function createHost(
           console.log('[realtime] 📨 Received new comment via Realtime:', payload.new);
           
           // Transform Supabase comment to CritMessage format
-          const comment = payload.new;
+          // REFACTORED: Cast comment to any to access database fields (board_id, author_name, etc.)
+          // The payload.new type from Supabase may not include all database fields in the type definition
+          const comment = payload.new as any;
           
           // Only process liveCrit comments
           if (comment.source === 'liveCrit') {
@@ -694,7 +696,9 @@ export async function createGuestWithRetry(
           console.log('[realtime] 📨 Guest received new comment via Realtime:', payload.new);
           
           // Transform Supabase comment to CritMessage format
-          const comment = payload.new;
+          // REFACTORED: Cast comment to any to access database fields (board_id, author_name, etc.)
+          // The payload.new type from Supabase may not include all database fields in the type definition
+          const comment = payload.new as any;
           
           // Only process liveCrit comments
           if (comment.source === 'liveCrit' && messageHandler) {

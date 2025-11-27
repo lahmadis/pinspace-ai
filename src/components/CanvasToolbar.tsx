@@ -20,8 +20,8 @@ export type ToolType =
   | "image"
   | "marquee"
   | "pen"
-  | "eraser";
-  // Pin tool removed from ToolType union - no longer available in toolbar UI
+  | "eraser"
+  | "pin"; // REFACTORED: Added "pin" back to ToolType union - used in BoardCanvas.tsx line 997 for pin comment functionality
 
 interface CanvasToolbarProps {
   activeTool?: ToolType; // Optional - will use context if not provided

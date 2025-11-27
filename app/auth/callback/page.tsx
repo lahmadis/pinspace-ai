@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -17,7 +17,7 @@ import { supabase } from "@/lib/supabaseClient";
  * 
  * This page is called automatically after user clicks magic link.
  */
-export default function AuthCallbackPage() {
+function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +104,15 @@ export default function AuthCallbackPage() {
     </div>
   );
 }
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CallbackContent />
+    </Suspense>
+  );
+}
+
 
 
 

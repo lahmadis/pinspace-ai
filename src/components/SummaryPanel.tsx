@@ -17,7 +17,8 @@ interface FeedbackItem {
   id: string;
   text: string;
   author: string;
-  timestamp: string;
+  // REFACTORED: timestamp can be string | number to match Comment and Task types
+  timestamp: string | number;
   category: string;
   isTask: boolean;
   taskId?: string;
@@ -76,11 +77,14 @@ export default function SummaryPanel({
       id: task.id,
       text: task.text,
       author,
-      timestamp: task.createdAt,
-      category,
+      // REFACTORED: Convert timestamp to string for FeedbackItem type
+      // Task.createdAt can be string | number, but FeedbackItem.timestamp accepts both
+      timestamp: String(task.createdAt),
+      // REFACTORED: Default category to "general" if not provided
+      category: task.category || "general",
       isTask: true,
       taskId: task.id,
-      taskStatus: task.status,
+      taskStatus: (task.status === "done" || task.status === "open") ? task.status : undefined,
     };
   });
 

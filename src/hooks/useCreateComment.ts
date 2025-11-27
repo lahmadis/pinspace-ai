@@ -114,8 +114,9 @@ export function useCreateComment(): UseCreateCommentResult {
         throw new Error(errorMsg);
       }
 
+      // REFACTORED: Add type guard before toLowerCase() to ensure category is string
       // Validate optional fields if provided
-      if (data.category !== undefined && typeof data.category !== 'string') {
+      if (data.category !== undefined && typeof data.category === 'string') {
         const validCategories = ['concept', 'plan', 'section', 'material', 'circulation', 'structure', 'general'];
         if (!validCategories.includes(data.category.toLowerCase())) {
           console.warn(`⚠️ Invalid category "${data.category}". Will default to "general"`);

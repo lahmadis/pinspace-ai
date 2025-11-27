@@ -285,7 +285,8 @@ export default function BoardList({
                   : config.emptyStateMessage || t("explore.emptyMessage")
               }
               onClearFilters={handleClearFilters}
-              hasFilters={hasActiveFilters}
+              // REFACTORED: Convert to boolean to ensure type compatibility
+              hasFilters={!!hasActiveFilters}
             />
           )}
         </>

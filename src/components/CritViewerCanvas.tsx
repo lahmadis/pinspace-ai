@@ -939,7 +939,7 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
           className="block"
           viewBox={`0 0 ${Math.max(el.width, 1)} ${Math.max(el.height, 1)}`}
         >
-          {renderShape(el, isSelected || isHovered)}
+          {renderShape(el, !!(isSelected || isHovered))}
         </svg>
       );
     }
@@ -1216,7 +1216,8 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
       }
       
       // Update overlay elements (crit stickies)
-      setOverlayElements?.(prev =>
+      // REFACTORED: Add optional chaining for setOverlayElements
+      setOverlayElements?.((prev) =>
         prev.map(el => {
           if (!selectedAtDragRef.current.includes(el.id)) return el;
           const start = startPosRef.current[el.id];
@@ -1437,7 +1438,7 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
       };
       
       // 1) add to elements (ensure no duplicates)
-      setOverlayElements((els) => {
+      setOverlayElements?.((els) => {
         const existing = new Set(els.map(el => el.id));
         if (existing.has(id)) {
           console.warn("[sticky] Duplicate ID detected, skipping creation:", id);
@@ -1470,7 +1471,8 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
       if (downIdRef.current === null) {
         // Clicked on empty canvas -> deselect
         setSelectedIds([]);
-        setHoverId(undefined);
+        // REFACTORED: Change setHoverId(undefined) to setHoverId(null) to match type
+        setHoverId(null);
         setInlineEditingId(null);
         setOverlayEditingId(null);
         queueMicrotask(() => onSelectionChange?.(null));
@@ -1505,7 +1507,7 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
         style={{
           pointerEvents: (tool === "pen" || tool === "eraser") ? "none" : "auto",
         }}
-        onContextMenu={(e) => e.preventDefault()}
+        onContextMenu={(e: any) => e.preventDefault()}
         onWheel={handleWheel}
         onPointerDown={handleCanvasPointerDown}
         onPointerMove={handleCanvasPointerMove}
@@ -1581,7 +1583,7 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
                   }}
                   // Images don't eat pointer while sticky tool is active
                   className={isStickyTool ? "relative pointer-events-none" : "relative pointer-events-auto"}
-                  onMouseDown={(e) => {
+                  onMouseDown={(e: any) => {
                     if (isPanningRef.current || spaceDownRef.current || e.button === 2) return;
                     // Selection/drag handled by handleCanvasMouseDown
                   }}
@@ -1636,14 +1638,14 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
                   text={el.text}
                   isSelected={isSelected}
                   isReadOnly={false}
-                  onDoubleClick={(e) => {
+                  onDoubleClick={(e: any) => {
                     e.stopPropagation();
                     // Select when double-clicking
                     setSelectedIds([el.id]);
                     setHoverId(el.id);
                     queueMicrotask(() => onSelectionChange?.(el.elementId || el.id));
                   }}
-                  onMouseDown={(e) => {
+                  onMouseDown={(e: any) => {
                     if (isPanningRef.current || spaceDownRef.current || e.button === 2) return;
                     // Selection/drag handled by handleCanvasMouseDown
                   }}
@@ -1675,7 +1677,7 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
                   key={el.id}
                   style={common}
                   className="bg-white rounded border border-gray-300 text-sm p-2 pointer-events-auto"
-                  onMouseDown={(e) => {
+                  onMouseDown={(e: any) => {
                     if (isPanningRef.current || spaceDownRef.current || e.button === 2) return;
                     // Selection/drag handled by handleCanvasMouseDown
                   }}
@@ -1703,7 +1705,7 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
                   key={el.id}
                   style={common}
                   className="pointer-events-auto"
-                  onMouseDown={(e) => {
+                  onMouseDown={(e: any) => {
                     if (isPanningRef.current || spaceDownRef.current || e.button === 2) return;
                     // Selection/drag handled by handleCanvasMouseDown
                   }}
@@ -1714,7 +1716,7 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
                     className="block"
                     viewBox={`0 0 ${Math.max(el.width, 1)} ${Math.max(el.height, 1)}`}
                   >
-                    {renderShape(el, isSelected || isHovered || isMarqueeHighlighted)}
+                    {renderShape(el, !!(isSelected || isHovered || isMarqueeHighlighted))}
                   </svg>
                   {/* Calm blue selection border (Miro-style) - only shows when element is selected */}
                   {isSelected && (
@@ -1756,7 +1758,7 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
                 text={el.text}
                 isSelected={isSelected}
                 isReadOnly={false}
-                onDoubleClick={(e) => {
+                onDoubleClick={(e: any) => {
                   e.stopPropagation();
                   // Select when double-clicking and set overlay editing state
                   setSelectedIds([el.id]);
@@ -1766,7 +1768,7 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
                 }}
                 onTextChange={(id, newText) => {
                   // Update overlay sticky (crit session element)
-                  setOverlayElements((els) =>
+                  setOverlayElements?.((els) =>
                     els.map((item) =>
                       (item.elementId || item.id) === id ? { ...item, text: newText.trim() } : item
                     )

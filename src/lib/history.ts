@@ -4,9 +4,9 @@
 import type { CanvasElement } from "@/types";
 
 interface HistoryState {
-  past: CanvasElement[][];
-  present: CanvasElement[];
-  future: CanvasElement[];
+  past: CanvasElement[][];      // Array of element arrays
+  present: CanvasElement[];     // Current element array
+  future: CanvasElement[][];    // Array of element arrays
 }
 
 const historyStates: Record<string, HistoryState> = {};

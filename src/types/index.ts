@@ -47,6 +47,14 @@ export type Comment = {
 // Alias for clarity
 export type PinnedComment = Comment;
 
+// Pin type for PresentModeView
+export type Pin = {
+  id: string;
+  group: string;
+  header: string;
+  body: string;
+};
+
 // Snapshot
 export type Snapshot = {
   id: string;
@@ -102,6 +110,8 @@ export type Task = {
   done?: boolean; // true if status === "done"
   // REFACTORED: createdAt can be number (Date.now()) or string (ISO timestamp)
   createdAt: number | string; // Timestamp (number) or ISO timestamp (string)
+  // REFACTORED: Added category field for task categorization
+  category?: string; // Category for grouping tasks (e.g., "concept", "plan", etc.)
 };
 
 // Crit Session Summary
@@ -238,4 +248,8 @@ export interface CanvasElement {
   // REFACTORED: Added ownerId field for tracking element ownership and permissions
   // Used for permission checking (canEdit, canDelete) in collaborative boards
   ownerId?: string; // User ID of the element creator/owner
+  
+  // REFACTORED: Added missing properties for shape rendering and element identification
+  borderRadius?: number; // Border radius for rounded shapes
+  elementId?: string; // Alias for id (for compatibility)
 }

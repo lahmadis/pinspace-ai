@@ -31,6 +31,8 @@ interface RightPanelProps {
   isCritActive?: boolean; // Whether live crit is currently active
   activeElementId?: string | null; // Currently selected element ID (exactly one element selected)
   selectedElementId?: string | null; // Selected element ID for filtering (exactly one selected)
+  // REFACTORED: Added elements prop to RightPanelProps interface
+  elements?: import("@/types").CanvasElement[]; // Canvas elements for element summary
   getElementSummary?: (elementId: string) => string; // Helper to get element label
   onJumpToElement?: (elementId: string) => void; // Jump to element callback
   getCritSessionSummary?: (boardId: string) => import("@/types").CritSessionSummary | null; // Get crit session summary
@@ -163,7 +165,8 @@ export default function RightPanel({
   }, [comments]);
   
   // Helper to format timestamp for live crit (show "just now" if <1min old)
-  const formatTimestamp = (timestamp: string, isLiveCrit: boolean) => {
+  // REFACTORED: Accept timestamp as string | number to match Comment type
+  const formatTimestamp = (timestamp: string | number, isLiveCrit: boolean) => {
     if (isLiveCrit && isCritActive) {
       const now = new Date();
       const commentTime = new Date(timestamp);
@@ -327,8 +330,7 @@ export default function RightPanel({
         </label>
         <textarea
           value={draftText}
-          onChange={(e) => setDraftText(e.target.value)}
-          disabled={isDemo}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDraftText(e.target.value)}
           className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${
             isDemo ? 'bg-gray-100 cursor-not-allowed' : ''
           }`}
@@ -350,7 +352,7 @@ export default function RightPanel({
           type="checkbox"
           id="makeTask"
           checked={draftMakeTask}
-          onChange={(e) => setDraftMakeTask(e.target.checked)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraftMakeTask(e.target.checked)}
           className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           disabled={isDemo || !selectedElementId}
         />
@@ -517,7 +519,7 @@ export default function RightPanel({
                         {deletableAuthorName && comment.author === deletableAuthorName && (
                           <button
                             type="button"
-                            onClick={(e) => { 
+                            onClick={(e: any) => { 
                               e.stopPropagation(); 
                               onDeleteComment?.(comment.id); 
                             }}
@@ -552,7 +554,7 @@ export default function RightPanel({
                     {comment.targetElementId && onJumpToElement && (
                       <div className="mt-2 pt-2 border-t border-gray-200">
                         <button
-                          onClick={(e) => {
+                          onClick={(e: any) => {
                             e.stopPropagation();
                             onJumpToElement(comment.targetElementId!);
                           }}
@@ -655,7 +657,7 @@ export default function RightPanel({
                             {/* Edit Button */}
                             <button
                               type="button"
-                              onClick={(e) => {
+                              onClick={(e: any) => {
                                 e.stopPropagation();
                                 setEditingComment(comment);
                                 setIsEditModalOpen(true);
@@ -670,7 +672,7 @@ export default function RightPanel({
                             {deletableAuthorName && comment.author === deletableAuthorName && (
                               <button
                                 type="button"
-                                onClick={(e) => {
+                                onClick={(e: any) => {
                                   e.stopPropagation();
                                   onDeleteComment?.(comment.id);
                                 }}
@@ -687,7 +689,7 @@ export default function RightPanel({
                         {(!canEditAuthorName || comment.author !== canEditAuthorName) && deletableAuthorName && comment.author === deletableAuthorName && (
                           <button
                             type="button"
-                            onClick={(e) => {
+                            onClick={(e: any) => {
                               e.stopPropagation();
                               onDeleteComment?.(comment.id);
                             }}
@@ -730,7 +732,7 @@ export default function RightPanel({
                     {comment.targetElementId && onJumpToElement && (
                       <div className="mt-2 pt-2 border-t border-gray-200">
                         <button
-                          onClick={(e) => {
+                          onClick={(e: any) => {
                             e.stopPropagation();
                             onJumpToElement(comment.targetElementId!);
                           }}
@@ -782,7 +784,7 @@ export default function RightPanel({
                         {deletableAuthorName && comment.author === deletableAuthorName && (
                           <button
                             type="button"
-                            onClick={(e) => { 
+                            onClick={(e: any) => { 
                               e.stopPropagation(); 
                               onDeleteComment?.(comment.id); 
                             }}
@@ -796,7 +798,7 @@ export default function RightPanel({
                       </div>
                       <div className="text-sm text-gray-900">{comment.text}</div>
                       <div className="text-xs text-zinc-400 mt-1">
-                        by {comment.author} • {formatTimestamp(comment.timestamp, comment.source === "liveCrit")}
+                        by {comment.author} • {formatTimestamp(String(comment.timestamp), comment.source === "liveCrit")}
                       </div>
                       {comment.source === "liveCrit" && (
                         <span className="mt-1 inline-block rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">

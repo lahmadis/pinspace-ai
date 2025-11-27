@@ -2,7 +2,7 @@
 // This file contains all boards with their cards, comments, and metadata
 // REFACTORED: BoardData type is now exported from @/types for consistency
 
-import type { BoardData } from "@/types";
+import type { BoardData, Card, Comment as AppComment } from "@/types";
 
 // In-memory boards array - this is the single source of truth
 export const boards: BoardData[] = [
@@ -107,7 +107,7 @@ export function getCardsForBoard(boardId: string): Card[] {
 }
 
 // Get comments for a board
-export function getCommentsForBoard(boardId: string): Comment[] {
+export function getCommentsForBoard(boardId: string): AppComment[] {
   const board = boards.find((b) => b.id === boardId);
   return board ? board.comments : [];
 }
@@ -135,7 +135,7 @@ export function addCardToBoard(boardId: string, card: Card): boolean {
 }
 
 // Add a comment to a board
-export function addCommentToBoard(comment: Comment): boolean {
+export function addCommentToBoard(comment: AppComment): boolean {
   const board = boards.find((b) => b.id === comment.boardId);
   if (board) {
     board.comments.unshift(comment);

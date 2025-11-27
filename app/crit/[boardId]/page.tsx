@@ -94,12 +94,18 @@ export default function CritPage({ params }: CritPageProps) {
         authorName: newComment.author,
         text: newComment.text,
         type: "comment" as const,
-        createdAt: newComment.timestamp,
+        // REFACTORED: Ensure createdAt is string for StoredComment type
+        // Comment type allows timestamp as string | number, but StoredComment requires createdAt as string
+        // Convert to string to ensure type compatibility
+        createdAt: String(newComment.timestamp),
         pinId: newComment.pinId || null,
         category: newComment.category,
         targetElementId: newComment.targetElementId || null,
-        x: newComment.x,
-        y: newComment.y,
+        // REFACTORED: Convert null to undefined for x and y properties
+        // StoredComment expects x and y to be number | undefined, not number | null
+        // Comment type allows x and y to be number | null | undefined, so we need to convert null to undefined
+        x: newComment.x === null ? undefined : newComment.x,
+        y: newComment.y === null ? undefined : newComment.y,
         task: newComment.task || false,
         source: newComment.source,
         target: target, // NEW: include target
@@ -124,8 +130,10 @@ export default function CritPage({ params }: CritPageProps) {
           boardId: newTask.boardId,
           text: newTask.text,
           sourceCommentId: newTask.sourceCommentId,
-          status: newTask.status,
-          createdAt: newTask.createdAt,
+          // REFACTORED: Ensure status is "open" | "done" for StoredTask type
+          status: (newTask.status === "done" ? "done" : "open") as "done" | "open",
+          // REFACTORED: Ensure createdAt is string for StoredTask type
+          createdAt: String(newTask.createdAt),
         }];
 
         saveTasks(boardId, updatedTasks);

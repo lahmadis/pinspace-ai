@@ -13,7 +13,8 @@ import { saveViewState, getViewState } from "@/lib/storage";
 
 interface BoardCanvasProps {
   elements: CanvasElement[];
-  setElements: (elements: CanvasElement[]) => void;
+  // REFACTORED: Type setElements as React state setter to support updater functions
+  setElements: Dispatch<SetStateAction<CanvasElement[]>>;
   selectedIds: string[];
   // REFACTORED: Changed from (ids: string[]) => void to Dispatch<SetStateAction<string[]>>
   // This allows setSelectedIds to accept both direct values and updater functions,
@@ -27,7 +28,8 @@ interface BoardCanvasProps {
   zoom: number;
   setZoom: (z: number) => void;
   pan: { x: number; y: number };
-  setPan: (p: { x: number; y: number }) => void;
+  // REFACTORED: Type setPan as React state setter to support updater functions
+  setPan: Dispatch<SetStateAction<{ x: number; y: number }>>;
   snap?: boolean;
   onSaveElements?: (updated?: CanvasElement[]) => void;
   isReadOnly?: boolean;
@@ -67,6 +69,10 @@ function uniqueById<T extends { id: string }>(arr: T[]): T[] {
   }
   return out;
 }
+
+// Type guard to check if event is a MouseEvent (has clientX/clientY)
+// DraggableEvent from react-rnd can be MouseEvent or TouchEvent
+const isMouseEvent = (e: any): e is { clientX: number; clientY: number } => 'clientX' in e && typeof e.clientX === 'number';
 
 export default function BoardCanvas({
   elements = [],
@@ -1090,7 +1096,9 @@ export default function BoardCanvas({
         
         // Normalize the drag rectangle (ensures positive width/height regardless of drag direction)
         // createStart and createEnd are already in canvas coordinates (from clientToCanvas conversion)
-        const R = normalizeBox(createStart, createEnd, constrain);
+        // REFACTORED: Provide default value of false when constrain is undefined
+        // normalizeBox expects a boolean, but constrain can be undefined when e?.shiftKey is undefined
+        const R = normalizeBox(createStart, createEnd, constrain ?? false);
         
         const minW = 16;
         const minH = 16;
@@ -1796,8 +1804,8 @@ export default function BoardCanvas({
             height: "100%",
             padding: "8px",
             border: "2px solid #3b82f6",
-            borderRadius: element.type === "sticky" ? "4px" : "0",
-            backgroundColor: element.type === "sticky" ? "#fffbe6" : "white",
+            borderRadius: "4px",
+            backgroundColor: "white",
             fontSize: element.fontSize || 16,
             fontWeight: element.fontWeight || "normal",
             fontFamily: "inherit",
@@ -1963,7 +1971,7 @@ export default function BoardCanvas({
                         : (el.type === "image" && el.text?.startsWith("PDF Page"))
                         ? "none" // No border for PDF pages
                         : "1px solid rgba(0,0,0,0.1)",
-                      borderRadius: el.type === "shape" ? "0" : (el.type === "shape" && el.shapeType === "circle" ? "9999px" : "4px"),
+                      borderRadius: el.type === "card" ? "8px" : "4px",
                       backgroundColor:
                         el.type === "sticky"
                           ? "#fffbe6"
@@ -1991,7 +1999,7 @@ export default function BoardCanvas({
                         className="block"
                         viewBox={`0 0 ${Math.max(el.width, 1)} ${Math.max(el.height, 1)}`}
                       >
-                        {renderShape(el, isSelected || isMarqueeHighlighted)}
+                        {renderShape(el, !!(isSelected || isMarqueeHighlighted))}
                       </svg>
                     ) : el.type === "image" && (el.src || el.imageUrl) ? (
                       <div 
@@ -2054,7 +2062,7 @@ export default function BoardCanvas({
                   bounds="parent"
                   onDragStart={(e) => {
                     // Remember where the pointer started for this element
-                    if (!isReadOnly && e.clientX !== undefined && e.clientY !== undefined) {
+                    if (!isReadOnly && isMouseEvent(e)) {
                       dragStateRef.current.set(el.id, {
                         startPos: { x: e.clientX, y: e.clientY },
                         isActuallyDragging: false,
@@ -2065,7 +2073,7 @@ export default function BoardCanvas({
                     if (isReadOnly) return;
                     
                     const dragState = dragStateRef.current.get(el.id);
-                    if (!dragState || !e.clientX || e.clientY === undefined) return;
+                    if (!dragState || !isMouseEvent(e)) return;
                     
                     const dx = e.clientX - dragState.startPos.x;
                     const dy = e.clientY - dragState.startPos.y;
@@ -2138,8 +2146,8 @@ export default function BoardCanvas({
                     setElements(updated);
                     onSaveElements?.(updated);
                   }}
-                  onMouseDown={(e) => handleElementMouseDown(e, el)}
-                  onContextMenu={(e) => {
+                  onMouseDown={(e) => handleElementMouseDown(e as unknown as React.MouseEvent<Element, MouseEvent>, el)}
+                  onContextMenu={(e: any) => {
                     e.preventDefault();
                     e.stopPropagation();
                   }}
@@ -2153,7 +2161,7 @@ export default function BoardCanvas({
                       : "1px solid rgba(0,0,0,0.1)",
                     background: "transparent",
                     boxSizing: "border-box",
-                    borderRadius: el.type === "shape" ? "0" : (el.type === "shape" && el.shapeType === "circle" ? "9999px" : "4px"),
+                    borderRadius: el.type === "card" ? "8px" : "4px",
                     margin: "0px", // No margin for any elements
                     cursor: isReadOnly
                       ? "default"
@@ -2177,7 +2185,7 @@ export default function BoardCanvas({
                       className="block w-full h-full"
                       viewBox={`0 0 ${Math.max(el.width, 1)} ${Math.max(el.height, 1)}`}
                     >
-                      {renderShape(el, isSelected || isMarqueeHighlighted)}
+                      {renderShape(el, !!(isSelected || isMarqueeHighlighted))}
                     </svg>
                   ) : el.type === "sticky" ? (
                     <StickyNote
