@@ -465,6 +465,7 @@ export type StoredProfile = {
   avatarUrl: string;
   boards: string[];
   isPrivate: boolean;
+  role?: "student" | "professor"; // user role from Supabase profiles table
 };
 
 export function getProfiles(): StoredProfile[] {

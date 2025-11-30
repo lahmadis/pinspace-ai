@@ -155,6 +155,7 @@ export type Profile = {
   avatarUrl: string; // can be placeholder
   boards: string[]; // array of boardIds that belong to this user
   isPrivate: boolean; // if true, we'll say "This account is private" on their profile
+  role?: "student" | "professor"; // user role from Supabase profiles table
 };
 
 // Public Board Preview (for explore page)

@@ -24,7 +24,9 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  authLoading: boolean; // Alias for loading for clarity
   signIn: (email: string) => Promise<{ error: Error | null }>;
+  signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -39,28 +41,36 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
 
   // Initialize auth state and listen for changes
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let mounted = true;
+
+    const init = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!mounted) return;
+      setUser(data.user ?? null);
+      // Get session for backward compatibility
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setSession(sessionData.session ?? null);
+      setAuthLoading(false);
+    };
+
+    init();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      setAuthLoading(false);
     });
 
-    // Listen for auth changes (sign in, sign out, token refresh)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Cleanup subscription on unmount
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   /**
@@ -74,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const signIn = useCallback(async (email: string): Promise<{ error: Error | null }> => {
     try {
-      setLoading(true);
+      setAuthLoading(true);
       
       // Send magic link email
       // redirectTo is optional - defaults to current page
@@ -98,7 +108,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("[AuthContext] Unexpected sign in error:", err);
       return { error };
     } finally {
-      setLoading(false);
+      setAuthLoading(false);
+    }
+  }, []);
+
+  /**
+   * Sign in with email and password
+   * 
+   * @param email - Email address
+   * @param password - Password
+   * @returns Object with error if sign in failed
+   */
+  const signInWithPassword = useCallback(async (email: string, password: string): Promise<{ error: Error | null }> => {
+    try {
+      setAuthLoading(true);
+      
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error("[AuthContext] Sign in with password error:", error);
+        return { error };
+      }
+
+      // Success - session will be updated by onAuthStateChange listener
+      return { error: null };
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error("Failed to sign in");
+      console.error("[AuthContext] Unexpected sign in with password error:", err);
+      return { error };
+    } finally {
+      setAuthLoading(false);
     }
   }, []);
 
@@ -107,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const signOut = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true);
+      setAuthLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error("[AuthContext] Sign out error:", error);
@@ -118,15 +160,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("[AuthContext] Unexpected sign out error:", err);
       throw err;
     } finally {
-      setLoading(false);
+      setAuthLoading(false);
     }
   }, []);
 
   const value: AuthContextType = {
     user,
     session,
-    loading,
+    loading: authLoading, // Backward compatibility
+    authLoading,
     signIn,
+    signInWithPassword,
     signOut,
   };
 
@@ -147,6 +191,8 @@ export function useAuth(): AuthContextType {
   }
   return context;
 }
+
+
 
 
 

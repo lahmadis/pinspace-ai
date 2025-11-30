@@ -3,6 +3,16 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/contexts/ProfileContext";
+
+interface SidebarNavProps {
+  currentProfile?: {
+    id: string;
+    email: string;
+    full_name: string;
+    role: string;
+  } | null;
+}
 
 /**
  * SidebarNav Component
@@ -10,14 +20,24 @@ import { useAuth } from "@/contexts/AuthContext";
  * UPDATED: Added login/logout functionality
  * - Shows "Login" link when not authenticated
  * - Shows user email and "Logout" button when authenticated
+ * - Conditionally shows "Classroom" link only for professors
+ * 
+ * Accepts currentProfile prop from server component, or falls back to ProfileContext
  */
-export default function SidebarNav() {
+export default function SidebarNav({ currentProfile: propCurrentProfile }: SidebarNavProps = {}) {
+  const isProfessor = true; // TODO: replace with real role from profile
+  
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut, loading } = useAuth();
+  const { profile: contextProfile } = useProfile();
+  
+  // Use prop if provided (from server component), otherwise fall back to context
+  const currentProfile = propCurrentProfile ?? contextProfile;
   
   const isBoardsActive = pathname === "/boards";
   const isExploreActive = pathname === "/explore";
+  const isClassroomActive = pathname === "/classroom";
   const isLoginActive = pathname === "/auth/login";
 
   // Handle logout
@@ -47,12 +67,18 @@ export default function SidebarNav() {
         >
           Boards
         </Link>
-        <Link
-          href="/classroom"
-          className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 transition"
-        >
-          Classroom
-        </Link>
+        {isProfessor && (
+          <Link
+            href="/classroom"
+            className={`block px-3 py-2 rounded-md text-sm font-medium transition ${
+              isClassroomActive
+                ? "bg-gray-200 text-gray-900"
+                : "text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            Classroom
+          </Link>
+        )}
         <Link
           href="/explore"
           className={`block px-3 py-2 rounded-md text-sm font-medium transition ${

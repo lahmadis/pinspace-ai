@@ -76,14 +76,13 @@ export default function CritCommentsPanel({ boardId, attachedElementId, source }
               .sort((a, b) => b.createdAt - a.createdAt)
               .map((c) => (
                 <div key={c.id} className="rounded-lg border px-3 py-2">
-                  <div className="text-[11px] text-zinc-500 flex items-center justify-between">
-                    <span>{c.category || "General"}</span>
+                  <div className="text-xs font-semibold text-zinc-700 flex items-center justify-between">
+                    <span>{c.createdBy || c.author || "Anonymous"}</span>
                     <span className="font-mono text-[10px] opacity-60">
                       {c.elementId?.slice(0, 6)}…
                     </span>
                   </div>
                   <div className="text-sm mt-1">{c.text}</div>
-                  <div className="text-[11px] text-zinc-400 mt-1">by {c.createdBy}</div>
                 </div>
               ))}
           </div>

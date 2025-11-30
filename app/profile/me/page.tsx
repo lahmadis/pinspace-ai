@@ -22,63 +22,104 @@ interface ProfileData {
   followers: number;
   following: number;
   boards: Board[];
+  role?: "student" | "professor";
 }
 
 export default function ProfileMePage() {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
 
   useEffect(() => {
-    // Try to load from profile storage first
-    let loadedProfile = null;
-    if (currentUser?.username) {
-      const username = currentUser.username.replace("@", "");
-      loadedProfile = getProfile(username);
-    }
+    const loadProfile = async () => {
+      // Try to fetch from API first (includes role from Supabase)
+      try {
+        const response = await fetch("/api/user/profile");
+        if (response.ok) {
+          const apiProfile = await response.json();
+          // Load boards from localStorage
+          const allBoards = getBoards();
+          const userBoardIds = apiProfile.boards || [];
+          const userBoards = allBoards
+            .filter((b) => userBoardIds.includes(b.id))
+            .map((board) => ({
+              id: board.id,
+              title: board.title,
+              lastEdited: board.lastEdited || new Date().toISOString(),
+              coverImage: undefined,
+            }));
 
-    // If profile exists in storage, use it
-    if (loadedProfile) {
-      // Load boards from localStorage
-      const allBoards = getBoards();
-      const userBoardIds = loadedProfile.boards || [];
-      const userBoards = allBoards
-        .filter((b) => userBoardIds.includes(b.id))
-        .map((board) => ({
-          id: board.id,
-          title: board.title,
-          lastEdited: board.lastEdited || new Date().toISOString(),
-          coverImage: undefined, // We could load from cards if needed
-        }));
+          setProfileData({
+            username: apiProfile.username || "",
+            displayName: apiProfile.displayName || "",
+            school: apiProfile.school || "",
+            bio: apiProfile.bio || "",
+            avatarUrl: apiProfile.avatarUrl || "",
+            followers: 12, // Mock for now
+            following: 28, // Mock for now
+            boards: userBoards,
+            role: apiProfile.role,
+          });
+          return;
+        }
+      } catch (error) {
+        console.error("[ProfileMePage] Error fetching profile from API:", error);
+      }
 
-      setProfileData({
-        username: loadedProfile.username,
-        displayName: loadedProfile.displayName,
-        school: loadedProfile.school,
-        bio: loadedProfile.bio,
-        avatarUrl: loadedProfile.avatarUrl || "",
-        followers: 12, // Mock for now
-        following: 28, // Mock for now
-        boards: userBoards,
-      });
-    } else {
-      // Use mock data as fallback
-      setProfileData({
-        username: "sarah.lahmadi",
-        displayName: "Sarah Lahmadi",
-        school: "Wentworth Institute of Technology",
-        bio: "Studio 5 · housing/urban circulation. Interested in reflective skins + public/private edges.",
-        avatarUrl: "",
-        followers: 12,
-        following: 28,
-        boards: [
-          {
-            id: "1",
-            title: "Runway / Movement Study",
-            lastEdited: Date.now() - 1000 * 60 * 15, // 15 minutes ago
-            coverImage: "",
-          },
-        ],
-      });
-    }
+      // Fallback to localStorage profile
+      let loadedProfile = null;
+      if (currentUser?.username) {
+        const username = currentUser.username.replace("@", "");
+        loadedProfile = getProfile(username);
+      }
+
+      // If profile exists in storage, use it
+      if (loadedProfile) {
+        // Load boards from localStorage
+        const allBoards = getBoards();
+        const userBoardIds = loadedProfile.boards || [];
+        const userBoards = allBoards
+          .filter((b) => userBoardIds.includes(b.id))
+          .map((board) => ({
+            id: board.id,
+            title: board.title,
+            lastEdited: board.lastEdited || new Date().toISOString(),
+            coverImage: undefined,
+          }));
+
+        setProfileData({
+          username: loadedProfile.username,
+          displayName: loadedProfile.displayName,
+          school: loadedProfile.school,
+          bio: loadedProfile.bio,
+          avatarUrl: loadedProfile.avatarUrl || "",
+          followers: 12,
+          following: 28,
+          boards: userBoards,
+          role: loadedProfile.role,
+        });
+      } else {
+        // Use mock data as fallback
+        setProfileData({
+          username: "sarah.lahmadi",
+          displayName: "Sarah Lahmadi",
+          school: "Wentworth Institute of Technology",
+          bio: "Studio 5 · housing/urban circulation. Interested in reflective skins + public/private edges.",
+          avatarUrl: "",
+          followers: 12,
+          following: 28,
+          boards: [
+            {
+              id: "1",
+              title: "Runway / Movement Study",
+              lastEdited: Date.now() - 1000 * 60 * 15,
+              coverImage: "",
+            },
+          ],
+          role: "student", // Default to student
+        });
+      }
+    };
+
+    loadProfile();
   }, []);
 
   if (!profileData) {
@@ -120,6 +161,11 @@ export default function ProfileMePage() {
                   @{profileData.username}
                 </p>
                 <p className="text-sm text-gray-700 mb-2">{profileData.school}</p>
+                {profileData.role && (
+                  <p className="text-xs text-gray-500 mb-2">
+                    Role: <span className="font-medium capitalize">{profileData.role}</span>
+                  </p>
+                )}
                 {profileData.bio && (
                   <p className="text-sm text-gray-700 leading-relaxed max-w-2xl">
                     {profileData.bio}

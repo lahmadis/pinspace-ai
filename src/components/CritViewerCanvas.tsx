@@ -182,6 +182,8 @@ export default function CritViewerCanvas({ boardId, onSelectionChange, onSelectT
     const loadElements = () => {
       try {
         const loaded = getElements(boardId) ?? [];
+        console.log(`[live] ✅ Loaded board id:`, boardId);
+        console.log(`[live] ✅ Elements count:`, loaded.length);
         console.log(`[CritViewerCanvas] Loading elements with boardId:`, boardId, { elementCount: loaded.length });
         setElements(loaded);
       } catch (err) {

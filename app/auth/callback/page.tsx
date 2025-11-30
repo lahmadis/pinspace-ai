@@ -49,8 +49,34 @@ function CallbackContent() {
         }
 
         if (data.session) {
-          // Success - redirect to boards
-          router.push("/boards");
+          // Success - fetch profile and redirect based on role
+          try {
+            const profileResponse = await fetch("/api/user/profile");
+            if (profileResponse.ok) {
+              const profile = await profileResponse.json();
+              const userRole = profile.role?.toLowerCase();
+
+              // Redirect based on role
+              if (userRole === "professor") {
+                // TODO: Later route professors to /classes or a professor dashboard
+                router.push("/boards");
+              } else if (userRole === "student") {
+                router.push("/boards");
+              } else {
+                // No role or old account - temporarily route to /boards
+                // TODO: Show a role-selection step for accounts without roles
+                router.push("/boards");
+              }
+            } else {
+              // Profile fetch failed, but session exists - redirect to boards
+              // TODO: Show a role-selection step if profile doesn't exist
+              router.push("/boards");
+            }
+          } catch (profileError) {
+            console.error("[AuthCallback] Profile fetch error:", profileError);
+            // Fallback: redirect to boards even if profile fetch fails
+            router.push("/boards");
+          }
         } else {
           // No session - redirect to login
           setError("No session found. Please try logging in again.");

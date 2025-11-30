@@ -4,6 +4,7 @@ import { UserProvider } from "@/contexts/UserContext";
 import { BoardsProvider } from "@/contexts/BoardsContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProfileProvider } from "@/contexts/ProfileContext";
 
 export const metadata: Metadata = {
   title: "PinSpace - Collaborative Pin-up Board",
@@ -20,13 +21,15 @@ export default function RootLayout({
       <body className="antialiased">
         {/* NEW: Wrap app with AuthProvider for authentication */}
         <AuthProvider>
-          <ThemeProvider>
-            <UserProvider>
-              <BoardsProvider>
-                {children}
-              </BoardsProvider>
-            </UserProvider>
-          </ThemeProvider>
+          <ProfileProvider>
+            <ThemeProvider>
+              <UserProvider>
+                <BoardsProvider>
+                  {children}
+                </BoardsProvider>
+              </UserProvider>
+            </ThemeProvider>
+          </ProfileProvider>
         </AuthProvider>
       </body>
     </html>

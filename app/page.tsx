@@ -12,7 +12,7 @@ export default function HomePage() {
         <p className="text-gray-600">Collaborative pin-up board for architecture students</p>
         <div className="flex gap-4 justify-center mt-6">
           <a
-            href="/boards"
+            href="/auth"
             className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
           >
             Go to Boards

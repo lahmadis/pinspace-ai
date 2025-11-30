@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -20,16 +20,29 @@ import { useAuth } from "@/contexts/AuthContext";
  */
 export default function LoginPage() {
   const router = useRouter();
-  const { user, signIn, loading } = useAuth();
+  const { user, signIn, authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Redirect if already logged in
-  if (user && !loading) {
-    router.push("/boards");
-    return null;
+  // Redirect if already logged in (only after loading is complete)
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.push("/boards");
+    }
+  }, [user, authLoading, router]);
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-500">Checking session...</p>
+        </div>
+      </div>
+    );
   }
 
   // Handle form submission
@@ -96,7 +109,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-              disabled={submitting || loading}
+              disabled={submitting || authLoading}
               autoComplete="email"
             />
           </div>
@@ -118,7 +131,7 @@ export default function LoginPage() {
           {/* Submit button */}
           <button
             type="submit"
-            disabled={submitting || loading || !email.trim()}
+            disabled={submitting || authLoading || !email.trim()}
             className="w-full px-4 py-2 bg-black text-white text-sm font-medium rounded-md hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? "Sending..." : "Send Magic Link"}
@@ -135,6 +148,8 @@ export default function LoginPage() {
     </div>
   );
 }
+
+
 
 
 

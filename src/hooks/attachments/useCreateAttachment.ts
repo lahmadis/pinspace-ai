@@ -189,10 +189,11 @@ export function useCreateAttachment(): UseCreateAttachmentResult {
       const normalizedBoardId = boardId.trim();
       console.log('✅ board_id validated:', normalizedBoardId);
 
-      // Validate file size (optional: 10MB limit)
-      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      // Validate file size (100MB limit)
+      const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+      const MAX_FILE_SIZE_MB = 100;
       if (file.size > MAX_FILE_SIZE) {
-        const errorMsg = `File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds maximum allowed size (10MB)`;
+        const errorMsg = `File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds maximum allowed size (${MAX_FILE_SIZE_MB}MB)`;
         console.error('❌ Validation failed:', errorMsg);
         console.groupEnd();
         throw new Error(errorMsg);

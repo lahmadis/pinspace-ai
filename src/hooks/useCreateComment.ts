@@ -25,6 +25,7 @@ interface CreateCommentData {
   task?: boolean;
   isTask?: boolean; // Backward compatibility
   source?: string | null;
+  critSessionId?: string | null; // Optional: Link comment to crit session
   pinId?: string | null; // Legacy field
 }
 

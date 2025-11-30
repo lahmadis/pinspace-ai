@@ -189,6 +189,7 @@ export default async function handler(req, res) {
         task = false,
         isTask = false, // Backward compatibility
         source = null,
+        critSessionId = null, // Optional: Link comment to crit session
         // Legacy fields
         pinId = null,
       } = req.body;
@@ -308,6 +309,7 @@ export default async function handler(req, res) {
       // ========================================================================
       
       // Determine target element ID (prefer targetElementId, fall back to elementId)
+      // REFACTORED: Save elementId exactly as received (with "e_" prefix if present)
       let finalElementId = null; // For UUID IDs (stored in element_id)
       let finalElementIdText = null; // For non-UUID IDs (stored in element_id_text)
       let elementIdIsUUID = false;
@@ -322,34 +324,33 @@ export default async function handler(req, res) {
           );
         }
         
-        // Validate and normalize element ID (supports both UUID and non-UUID)
-        const validation = validateAndNormalizeElementId(targetElementId);
-        if (!validation.valid) {
-          console.error(`[POST /api/comments] ❌ Element ID validation failed:`, {
-            original: targetElementId,
-            error: validation.error,
-          });
+        // Convert to string and trim (save exactly as received, no prefix stripping)
+        const originalElementId = String(targetElementId).trim();
+        if (!originalElementId) {
           return errorResponse(
             res,
-            'Invalid targetElementId',
+            'targetElementId cannot be empty',
             400,
-            validation.error || 'Invalid element ID'
+            'targetElementId must be a non-empty string'
           );
         }
         
-        // Store in appropriate column based on ID type
-        if (validation.isUUID) {
-          finalElementId = validation.normalizedId;
+        // Check if it's a valid UUID (without stripping prefix)
+        const isUUID = isValidUUID(originalElementId);
+        
+        // Store in appropriate column based on ID type (save original value with prefix)
+        if (isUUID) {
+          finalElementId = originalElementId;
           elementIdIsUUID = true;
         } else {
-          finalElementIdText = validation.normalizedId;
+          finalElementIdText = originalElementId;
         }
         
-        console.log(`[POST /api/comments] ✅ Element ID validation passed:`, {
+        console.log(`[POST /api/comments] ✅ Element ID saved (no prefix stripping):`, {
           original: targetElementId,
-          normalized: validation.normalizedId,
-          isUUID: validation.isUUID,
-          storageColumn: validation.isUUID ? 'element_id' : 'element_id_text',
+          saved: originalElementId,
+          isUUID: isUUID,
+          storageColumn: isUUID ? 'element_id' : 'element_id_text',
         });
       } else if (elementId !== undefined && elementId !== null) {
         if (typeof elementId !== 'string' && typeof elementId !== 'number') {
@@ -361,34 +362,33 @@ export default async function handler(req, res) {
           );
         }
         
-        // Validate and normalize element ID (supports both UUID and non-UUID)
-        const validation = validateAndNormalizeElementId(elementId);
-        if (!validation.valid) {
-          console.error(`[POST /api/comments] ❌ Element ID validation failed:`, {
-            original: elementId,
-            error: validation.error,
-          });
+        // Convert to string and trim (save exactly as received, no prefix stripping)
+        const originalElementId = String(elementId).trim();
+        if (!originalElementId) {
           return errorResponse(
             res,
-            'Invalid elementId',
+            'elementId cannot be empty',
             400,
-            validation.error || 'Invalid element ID'
+            'elementId must be a non-empty string'
           );
         }
         
-        // Store in appropriate column based on ID type
-        if (validation.isUUID) {
-          finalElementId = validation.normalizedId;
+        // Check if it's a valid UUID (without stripping prefix)
+        const isUUID = isValidUUID(originalElementId);
+        
+        // Store in appropriate column based on ID type (save original value with prefix)
+        if (isUUID) {
+          finalElementId = originalElementId;
           elementIdIsUUID = true;
         } else {
-          finalElementIdText = validation.normalizedId;
+          finalElementIdText = originalElementId;
         }
         
-        console.log(`[POST /api/comments] ✅ Element ID validation passed:`, {
+        console.log(`[POST /api/comments] ✅ Element ID saved (no prefix stripping):`, {
           original: elementId,
-          normalized: validation.normalizedId,
-          isUUID: validation.isUUID,
-          storageColumn: validation.isUUID ? 'element_id' : 'element_id_text',
+          saved: originalElementId,
+          isUUID: isUUID,
+          storageColumn: isUUID ? 'element_id' : 'element_id_text',
         });
       }
 
@@ -468,6 +468,33 @@ export default async function handler(req, res) {
       // - Non-UUID element IDs → stored in `element_id_text` (TEXT column)
       // - Only one column should be set at a time (the other should be null)
       // ========================================================================
+      // Step 12: Validate critSessionId (optional, must be UUID if provided)
+      let finalCritSessionId = null;
+      if (critSessionId !== undefined && critSessionId !== null) {
+        if (typeof critSessionId !== 'string') {
+          return errorResponse(
+            res,
+            'critSessionId must be a string or null',
+            400,
+            `critSessionId must be a string or null. Received: ${typeof critSessionId}`
+          );
+        }
+        const trimmedCritSessionId = critSessionId.trim();
+        if (trimmedCritSessionId.length > 0) {
+          // Validate it's a valid UUID format
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(trimmedCritSessionId)) {
+            return errorResponse(
+              res,
+              'critSessionId must be a valid UUID',
+              400,
+              `critSessionId must be a valid UUID format. Received: "${critSessionId}"`
+            );
+          }
+          finalCritSessionId = trimmedCritSessionId;
+        }
+      }
+
       const commentData = {
         board_id: boardId.trim(),
         text: trimmedText,
@@ -484,6 +511,7 @@ export default async function handler(req, res) {
         category: finalCategory,
         is_task: finalIsTask,
         source: finalSource,
+        crit_session_id: finalCritSessionId, // Link to crit session if provided (null for non-live crit comments)
         pin_id: pinId || null,
         type: 'comment', // Default type
       };

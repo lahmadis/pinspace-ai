@@ -2,32 +2,50 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { Snapshot } from "@/types";
 import { getBoards } from "@/lib/storage";
 import { timeAgo } from "@/lib/time";
 
+interface CritSession {
+  id: string;
+  started_at: string;
+  ended_at: string | null;
+  status: string;
+  board_snapshot: any;
+  comment_count?: number;
+}
+
 interface HeaderBarProps {
   boardId: string;
-  snapshots: Snapshot[];
-  viewingSnapshotId: string | null;
-  onSnapshotChange: (snapshotId: string | null) => void;
-  onSaveSnapshot?: () => void; // Optional - no longer used
-  onPresent?: () => void; // Toggle present mode
-  onShare?: () => void; // Open share modal
-  onSaveTimelineSnapshot?: () => void; // Optional - no longer used
-  onStartCrit?: () => void; // Open crit share modal
-  onEndCrit?: () => void; // End crit mode
-  isCritActive?: boolean; // Whether crit is currently active
-  isPresenting?: boolean; // Whether in present mode
-  onEndPresent?: () => void; // Exit present mode
-  isStartingCrit?: boolean; // Whether crit is currently starting (for loading state)
+  critSessions: CritSession[];
+  selectedCritSessionId: string | null;
+  onCritSessionChange: (sessionId: string | null) => void;
+  onSaveSnapshot?: () => void;
+  onPresent?: () => void;
+  onShare?: () => void;
+  onSaveTimelineSnapshot?: () => void;
+  onStartCrit?: () => void;
+  onEndCrit?: () => void;
+  isCritActive?: boolean;
+  isPresenting?: boolean;
+  onEndPresent?: () => void;
+  isStartingCrit?: boolean;
+  isRecording?: boolean;
+  recordingDuration?: string;
+  audioBlob?: Blob | null;
+  onStartRecording?: () => void;
+  onStopRecording?: () => void;
+  onProcessAudio?: () => void;
+  processingAudio?: boolean;
+  audioDevices?: MediaDeviceInfo[];
+  selectedMicId?: string;
+  onMicChange?: (deviceId: string) => void;
 }
 
 export default function HeaderBar({
   boardId,
-  snapshots,
-  viewingSnapshotId,
-  onSnapshotChange,
+  critSessions,
+  selectedCritSessionId,
+  onCritSessionChange,
   onSaveSnapshot,
   onPresent,
   onShare,
@@ -37,7 +55,17 @@ export default function HeaderBar({
   isCritActive = false,
   isPresenting = false,
   onEndPresent,
-  isStartingCrit = false, // Loading state for crit button
+  isStartingCrit = false,
+  isRecording = false,
+  recordingDuration = "00:00",
+  audioBlob = null,
+  onStartRecording,
+  onStopRecording,
+  onProcessAudio,
+  processingAudio = false,
+  audioDevices = [],
+  selectedMicId = "",
+  onMicChange,
 }: HeaderBarProps) {
   const router = useRouter();
   const [visibility, setVisibility] = useState<"private" | "public">("private");
@@ -45,11 +73,9 @@ export default function HeaderBar({
   const [lastEdited, setLastEdited] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load current board data
   useEffect(() => {
     async function loadBoard() {
       try {
-        // Load from localStorage first
         const storedBoards = getBoards();
         const storedBoard = storedBoards.find((b) => b.id === boardId);
         if (storedBoard) {
@@ -57,11 +83,9 @@ export default function HeaderBar({
           setLastEdited(storedBoard.lastEdited);
         }
 
-        // Also load from API - UPDATED: Use single board endpoint
         try {
           const res = await fetch(`/api/boards/${boardId}`);
           if (res.ok) {
-            // UPDATED: Handle new standardized { data, error } format
             const responseData = await res.json();
             if (responseData.error) {
               console.error("API error loading board:", responseData.error);
@@ -80,7 +104,6 @@ export default function HeaderBar({
               }
             }
           } else {
-            // Handle HTTP errors - try to parse error response
             try {
               const errorData = await res.json();
               if (errorData.error) {
@@ -91,7 +114,6 @@ export default function HeaderBar({
             }
           }
         } catch (apiErr) {
-          // Network or other fetch errors
           console.error("Network error loading board:", apiErr);
         }
       } catch (err) {
@@ -102,14 +124,13 @@ export default function HeaderBar({
     }
     loadBoard();
 
-    // Set up interval to refresh lastEdited from storage
     const interval = setInterval(() => {
       const storedBoards = getBoards();
       const storedBoard = storedBoards.find((b) => b.id === boardId);
       if (storedBoard?.lastEdited) {
         setLastEdited(storedBoard.lastEdited);
       }
-    }, 1000); // Check every second
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [boardId]);
@@ -119,9 +140,8 @@ export default function HeaderBar({
   };
 
   const handleExportSheet = () => {
-    // Build URL with optional snapshot version query param
-    const url = viewingSnapshotId
-      ? `/board/${boardId}/export?version=${viewingSnapshotId}`
+    const url = selectedCritSessionId
+      ? `/board/${boardId}/export?session=${selectedCritSessionId}`
       : `/board/${boardId}/export`;
     window.open(url, "_blank");
   };
@@ -133,7 +153,6 @@ export default function HeaderBar({
     setVisibility(newVisibility);
 
     try {
-      // FIXED: Use correct endpoint format /api/boards/[id] instead of /api/boards
       const res = await fetch(`/api/boards/${boardId}`, {
         method: "PATCH",
         headers: {
@@ -145,30 +164,46 @@ export default function HeaderBar({
       });
 
       if (!res.ok) {
-        // UPDATED: Handle new standardized { data, error } format
         const responseData = await res.json();
         const errorMessage = responseData.error?.message || responseData.error || "Failed to update board visibility";
         console.error("Failed to update board visibility:", errorMessage);
-        // Revert on error
         setVisibility(visibility);
       } else {
-        // UPDATED: Handle new standardized { data, error } format
         const responseData = await res.json();
         if (responseData.error) {
           console.error("API error updating board:", responseData.error);
-          // Revert on error
           setVisibility(visibility);
         }
       }
     } catch (err) {
       console.error("Error updating board visibility", err);
-      // Revert on error
       setVisibility(visibility);
     }
   };
 
+  const formatCritSessionLabel = (session: CritSession) => {
+    const date = new Date(session.started_at);
+    const dateStr = date.toLocaleDateString('en-US', { 
+      month: '2-digit', 
+      day: '2-digit', 
+      year: 'numeric' 
+    });
+    const timeStr = date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    
+    const commentCount = session.comment_count || 0;
+    const commentLabel = commentCount === 1 ? 'comment' : 'comments';
+    
+    if (session.status === 'active') {
+      return `${dateStr} ${timeStr} - Live (${commentCount} ${commentLabel})`;
+    }
+    
+    return `${dateStr} ${timeStr} (${commentCount} ${commentLabel})`;
+  };
 
-  // Present mode: slim header with minimal controls
   if (isPresenting) {
     return (
       <header className="bg-white border-b border-gray-200 px-8 py-4">
@@ -223,7 +258,6 @@ export default function HeaderBar({
     );
   }
 
-  // Normal mode: full header with all controls
   return (
     <header className="bg-white border-b border-gray-200 px-8 py-6">
       <div className="flex items-center justify-between mb-3">
@@ -274,6 +308,87 @@ export default function HeaderBar({
               End Crit
             </button>
           )}
+          {onStartRecording && !isRecording && !audioBlob && (
+            <>
+              {audioDevices.length > 1 && onMicChange && (
+                <select
+                  value={selectedMicId}
+                  onChange={(e) => onMicChange(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  title="Select microphone"
+                >
+                  {audioDevices.map((device, index) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `Microphone ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <button
+                onClick={onStartRecording}
+                className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition flex items-center gap-2"
+                title="Record architecture critique audio"
+              >
+                <span>🎤</span>
+                Record Crit
+              </button>
+            </>
+          )}
+          {isRecording && (
+            <div className="flex items-center gap-3 px-4 py-2 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex items-center gap-2">
+                <span className={`w-3 h-3 rounded-full bg-red-600 ${isRecording ? "animate-pulse" : ""}`}></span>
+                <span className="text-sm font-medium text-red-700">Recording</span>
+                <span className="text-sm text-red-600 font-mono">{recordingDuration}</span>
+              </div>
+              {onStopRecording && (
+                <button
+                  onClick={onStopRecording}
+                  className="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition"
+                >
+                  Stop
+                </button>
+              )}
+            </div>
+          )}
+          {audioBlob && !isRecording && (
+            <div className="flex items-center gap-2">
+              {processingAudio ? (
+                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-sm text-blue-700">Transcribing and analyzing...</span>
+                </div>
+              ) : (
+                <>
+                  <span className="text-sm text-gray-600">Audio ready</span>
+                  {audioBlob && (
+                    <button
+                      onClick={() => {
+                        const url = URL.createObjectURL(audioBlob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'test-recording.webm';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 transition"
+                      title="Download recorded audio to test locally"
+                    >
+                      Download Test Audio
+                    </button>
+                  )}
+                  {onProcessAudio && (
+                    <button
+                      onClick={onProcessAudio}
+                      className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition"
+                    >
+                      Process Audio
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           {onShare && (
             <button
               onClick={onShare}
@@ -293,14 +408,12 @@ export default function HeaderBar({
       </div>
 
       <div className="flex items-center gap-6 mt-3 pt-3 border-t border-gray-200">
-        {/* Last edited timestamp */}
         {lastEdited && (
           <div className="text-xs text-gray-500">
             Last edited {timeAgo(lastEdited)}
           </div>
         )}
 
-        {/* Visibility dropdown - moved to top for better visibility */}
         <div>
           <label className="text-xs font-medium text-gray-700 mb-2 block">
             Visibility:
@@ -316,28 +429,29 @@ export default function HeaderBar({
           </select>
         </div>
 
-        {/* Board version dropdown */}
         <div className="flex-1">
           <label className="text-xs font-medium text-gray-700 mb-2 block">
-            Board version
+            Crit Session
           </label>
           <select
-            value={viewingSnapshotId || ""}
+            value={selectedCritSessionId || ""}
             onChange={(e) => {
               if (e.target.value === "") {
-                onSnapshotChange(null);
+                onCritSessionChange(null);
               } else {
-                onSnapshotChange(e.target.value);
+                onCritSessionChange(e.target.value);
               }
             }}
             className="w-full max-w-xs px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           >
-            <option value="">Live board</option>
-            {snapshots.map((snapshot) => (
-              <option key={snapshot.id} value={snapshot.id}>
-                {snapshot.label}
-              </option>
-            ))}
+            <option value="">Current (Live Board)</option>
+            {critSessions
+              .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
+              .map((session) => (
+                <option key={session.id} value={session.id}>
+                  {formatCritSessionLabel(session)}
+                </option>
+              ))}
           </select>
         </div>
       </div>

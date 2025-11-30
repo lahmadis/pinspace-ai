@@ -21,6 +21,7 @@ import type { CommentTarget } from "@/lib/storage";
 // - useDeleteComment: Deletes comments from Supabase via API
 // ========================================================================
 import { useComments, useCreateComment, useDeleteComment } from "@/hooks/comments";
+import { useAttachments } from "@/hooks/attachments/useAttachments";
 import type { Comment } from "@/types";
 
 import type { PenStroke } from "@/hooks/usePenDrawing";
@@ -77,6 +78,7 @@ export default function LiveSessionPage() {
   }, [sessionId]);
 
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
+  const [currentCritSessionId, setCurrentCritSessionId] = useState<string | null>(null); // Database crit session ID
   const [rtReady, setRtReady] = useState(false);
   // ========================================================================
   // Crit Session Validation State
@@ -129,6 +131,26 @@ export default function LiveSessionPage() {
     error: commentsError, 
     refetch: refetchComments 
   } = useComments(activeBoardId);
+
+  // ========================================================================
+  // Supabase Attachments: Fetch attachments from database
+  // ========================================================================
+  // useAttachments hook automatically:
+  // - Fetches attachments from Supabase via /api/attachments?boardId={boardId}
+  // - Polls for updates every 5 seconds (real-time synchronization)
+  // - Handles loading and error states
+  // - Groups attachments by commentId and provides board-level attachments
+  // ========================================================================
+  const {
+    attachments,
+    loading: attachmentsLoading,
+    error: attachmentsError,
+    refetch: refetchAttachments,
+    boardAttachments,
+  } = useAttachments({
+    boardId: activeBoardId,
+    enabled: !!activeBoardId, // Only fetch when boardId is available
+  });
   
   // Filter to only show liveCrit comments (from this session)
   const comments = useMemo(() => {
@@ -137,6 +159,25 @@ export default function LiveSessionPage() {
     // This ensures we only see comments from the live crit session
     return allComments.filter(c => c.source === 'liveCrit');
   }, [allComments]);
+
+  // ========================================================================
+  // Logging: Verify board ID and data counts match
+  // ========================================================================
+  // Note: Elements are managed by CritViewerCanvas, not this component
+  // Elements count is logged inside CritViewerCanvas when it loads
+  // ========================================================================
+  useEffect(() => {
+    if (activeBoardId) {
+      console.log('[live] ========================================');
+      console.log('[live] 📊 LIVE CRIT PAGE DATA SUMMARY');
+      console.log('[live] ========================================');
+      console.log('[live] ✅ Board ID:', activeBoardId);
+      console.log('[live] ✅ Attachments count:', attachments.length);
+      console.log('[live] ✅ Board attachments count:', boardAttachments.length);
+      console.log('[live] ✅ Comments count:', comments.length);
+      console.log('[live] ========================================');
+    }
+  }, [activeBoardId, attachments.length, boardAttachments.length, comments.length]);
 
   // Stabilize the handler to prevent redundant updates and infinite loops
   const setSelectedIdsSafe = useCallback((next: string[]) => {
@@ -426,7 +467,7 @@ export default function LiveSessionPage() {
         
         if (getSessionResponse.ok) {
           const getSessionResponseData = await getSessionResponse.json();
-          const existingSession = getSessionResponseData.data || getSessionResponseData;
+          const existingSession = getSessionResponseData.session || getSessionResponseData.data || getSessionResponseData;
           
           if (existingSession) {
             console.log('[live] ✅ Step 2: Session found in Supabase:', {
@@ -438,12 +479,22 @@ export default function LiveSessionPage() {
             });
 
             // ========================================================================
+            // Store crit session database ID for linking comments
+            // ========================================================================
+            if (existingSession.id) {
+              setCurrentCritSessionId(existingSession.id);
+              console.log('[live] 📋 Stored crit session ID:', existingSession.id);
+            }
+
+            // ========================================================================
             // REFACTORED: Always set activeBoardId from session's board_id
             // This ensures the board is always loaded from the session
             // ========================================================================
             if (existingSession.boardId) {
-              console.log('[live] 📋 Step 2.5: Setting activeBoardId from session:', existingSession.boardId);
-              setActiveBoardId(existingSession.boardId);
+              const resolvedBoardId = existingSession.boardId;
+              console.log('[live] 📋 Step 2.5: Setting activeBoardId from session:', resolvedBoardId);
+              console.log('[live] ✅ Loaded board id:', resolvedBoardId);
+              setActiveBoardId(resolvedBoardId);
             } else {
               console.error('[live] ❌ Step 2.5: Session found but boardId is missing');
               setSessionValid(false);
@@ -485,7 +536,7 @@ export default function LiveSessionPage() {
               
               if (patchSessionResponse.ok) {
                 const patchSessionResponseData = await patchSessionResponse.json();
-                const reactivatedSession = patchSessionResponseData.data || patchSessionResponseData;
+                const reactivatedSession = patchSessionResponseData.session || patchSessionResponseData.data || patchSessionResponseData;
                 
                 console.log('[live] ✅ Step 4: Session reactivated successfully:', {
                   id: reactivatedSession.id,
@@ -498,11 +549,21 @@ export default function LiveSessionPage() {
                 console.log('[live] ========================================');
                 
                 // ========================================================================
+                // Store crit session database ID for linking comments
+                // ========================================================================
+                if (reactivatedSession.id) {
+                  setCurrentCritSessionId(reactivatedSession.id);
+                  console.log('[live] 📋 Stored crit session ID from reactivated session:', reactivatedSession.id);
+                }
+                
+                // ========================================================================
                 // REFACTORED: Ensure boardId is set from reactivated session
                 // ========================================================================
                 if (reactivatedSession.boardId) {
-                  console.log('[live] 📋 Step 4.5: Setting activeBoardId from reactivated session:', reactivatedSession.boardId);
-                  setActiveBoardId(reactivatedSession.boardId);
+                  const resolvedBoardId = reactivatedSession.boardId;
+                  console.log('[live] 📋 Step 4.5: Setting activeBoardId from reactivated session:', resolvedBoardId);
+                  console.log('[live] ✅ Loaded board id:', resolvedBoardId);
+                  setActiveBoardId(resolvedBoardId);
                 }
                 
                 setSessionValid(true);
@@ -823,6 +884,7 @@ export default function LiveSessionPage() {
       task: opts?.makeTask || false,
         isTask: opts?.makeTask || false, // Backward compatibility
         source: "liveCrit", // Mark as live crit comment
+        critSessionId: currentCritSessionId, // Link comment to crit session
       });
 
       if (newComment) {
@@ -869,7 +931,7 @@ export default function LiveSessionPage() {
     // - createCommentApi: NOT included - stable from useCreateComment hook, accessed via closure
     // - refetchComments: NOT included - stable from useComments hook, accessed via closure
     // ========================================================================
-  }, [activeElementId, activeBoardId, name, createCommentError, sessionValid, sessionLoading]);
+  }, [activeElementId, activeBoardId, name, createCommentError, sessionValid, sessionLoading, currentCritSessionId]);
 
   // ========================================================================
   // Supabase Comment Deletion Hook
