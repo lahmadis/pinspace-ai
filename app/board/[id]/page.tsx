@@ -63,6 +63,7 @@ interface CritSession {
   started_at: string;
   ended_at: string | null;
   status: string;
+  analysis?: any; // JSONB field for AI-generated analysis
   board_snapshot: {
     elements: CanvasElement[];
     cards: Card[];
@@ -137,6 +138,7 @@ function BoardPageContent({ boardId }: { boardId: string }) {
   // ⭐ NEW: Crit session management
   const [critSessions, setCritSessions] = useState<CritSession[]>([]);
   const [selectedCritSessionId, setSelectedCritSessionId] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
   
   // Audio recording state
   const {
@@ -148,31 +150,6 @@ function BoardPageContent({ boardId }: { boardId: string }) {
     error: recordingError,
   } = useAudioRecorder();
   
-  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedMicId, setSelectedMicId] = useState<string>("");
-  
-  useEffect(() => {
-    const loadAudioDevices = async () => {
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const mics = devices.filter(d => d.kind === 'audioinput');
-        console.log("[Board] Available microphones:", mics);
-        setAudioDevices(mics);
-        if (mics.length > 0) {
-          setSelectedMicId(mics[0].deviceId);
-          console.log("[Board] Default microphone selected:", mics[0].label || mics[0].deviceId);
-        }
-      } catch (error) {
-        console.error("[Board] Error loading audio devices:", error);
-      }
-    };
-    loadAudioDevices();
-    navigator.mediaDevices.addEventListener('devicechange', loadAudioDevices);
-    return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', loadAudioDevices);
-    };
-  }, []);
   
   useEffect(() => {
     console.log("[Board] Audio recording state changed - isRecording:", isRecording, "duration:", duration);
@@ -826,21 +803,34 @@ function BoardPageContent({ boardId }: { boardId: string }) {
     }
   }, [boardId, starting, comments, createCommentApi, refetchComments, createCommentError]);
 
+  // ⭐ NEW: Load crit sessions from API
+  const loadCritSessions = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/boards/${boardId}/crit-sessions`);
+      if (res.ok) {
+        const data = await res.json();
+        setCritSessions(data.sessions || []);
+        console.log("[board] ✅ Loaded crit sessions:", data.sessions?.length || 0);
+      }
+    } catch (error) {
+      console.error("[board] Failed to load crit sessions:", error);
+    }
+  }, [boardId]);
+
   const handleStartAudioRecording = useCallback(async () => {
     console.log("[Board] handleStartAudioRecording() called");
     console.log("[Board] Current isRecording state:", isRecording);
     console.log("[Board] Current audioBlob:", audioBlob ? `exists (${audioBlob.size} bytes)` : "null");
-    console.log("[Board] Selected microphone ID:", selectedMicId);
     try {
-      console.log("[Board] Calling startRecording() with deviceId:", selectedMicId || "default");
-      await startRecording(selectedMicId || undefined);
+      console.log("[Board] Calling startRecording()");
+      await startRecording();
       console.log("[Board] startRecording() completed successfully");
     } catch (error) {
       console.error("[Board] Failed to start recording:", error);
       console.error("[Board] Recording error state:", recordingError);
       alert(recordingError || "Failed to start recording. Please check microphone permissions.");
     }
-  }, [startRecording, recordingError, isRecording, audioBlob, selectedMicId]);
+  }, [startRecording, recordingError, isRecording, audioBlob]);
 
   const handleStopAudioRecording = useCallback(() => {
     console.log("[Board] handleStopAudioRecording() called");
@@ -901,13 +891,38 @@ function BoardPageContent({ boardId }: { boardId: string }) {
       const results = await response.json();
       setAudioResults(results);
       setShowAudioResults(true);
+      
+      // Extract analysis from results and save to database
+      const parsedAnalysis = results.analysis || null;
+      if (parsedAnalysis && currentCritSessionId) {
+        setAnalysisResult(parsedAnalysis);
+        
+        // Save analysis to database
+        try {
+          const saveResponse = await fetch(`/api/crit-sessions/${currentCritSessionId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ analysis: parsedAnalysis }),
+          });
+          
+          if (saveResponse.ok) {
+            console.log('[handleProcessAudio] Analysis saved successfully');
+            // Reload crit sessions to get updated analysis
+            await loadCritSessions();
+          } else {
+            console.error('[handleProcessAudio] Failed to save analysis');
+          }
+        } catch (err) {
+          console.error('[handleProcessAudio] Error saving analysis:', err);
+        }
+      }
     } catch (error) {
       console.error("Failed to process audio:", error);
       alert(error instanceof Error ? error.message : "Failed to process audio. Please try again.");
     } finally {
       setProcessingAudio(false);
     }
-  }, [audioBlob]);
+  }, [audioBlob, currentCritSessionId, loadCritSessions]);
 
   const handleEndCrit = useCallback(async () => {
     setIsCritActive(false);
@@ -1002,25 +1017,12 @@ function BoardPageContent({ boardId }: { boardId: string }) {
     updateBoardLastEdited(boardId, new Date().toISOString());
   }, [comments, tasks, boardId, currentCritSessionId]);
 
-  // ⭐ NEW: Load crit sessions from API
-  const loadCritSessions = async () => {
-    try {
-      const res = await fetch(`/api/boards/${boardId}/crit-sessions`);
-      if (res.ok) {
-        const data = await res.json();
-        setCritSessions(data.sessions || []);
-        console.log("[board] ✅ Loaded crit sessions:", data.sessions?.length || 0);
-      }
-    } catch (error) {
-      console.error("[board] Failed to load crit sessions:", error);
-    }
-  };
-
   // ⭐ NEW: Handle selecting a crit session
   const handleSelectCritSession = useCallback(async (sessionId: string | null) => {
     if (sessionId === null) {
       // Return to current/live board
       setSelectedCritSessionId(null);
+      setAnalysisResult(null);
       // Reload current board data
       await loadBoardData();
       return;
@@ -1031,6 +1033,9 @@ function BoardPageContent({ boardId }: { boardId: string }) {
     if (!session) return;
     
     setSelectedCritSessionId(sessionId);
+    
+    // Load analysis from session
+    setAnalysisResult(session.analysis || null);
     
     // Load board snapshot from session
     if (session.board_snapshot) {
@@ -1043,6 +1048,19 @@ function BoardPageContent({ boardId }: { boardId: string }) {
     // Comments are already filtered by useMemo above
     console.log("[board] ✅ Loaded crit session:", sessionId);
   }, [critSessions, boardTitle]);
+
+  // Load analysis when switching crit sessions
+  useEffect(() => {
+    if (!selectedCritSessionId) {
+      setAnalysisResult(null);
+      return;
+    }
+    
+    const session = critSessions.find(s => s.id === selectedCritSessionId);
+    if (session) {
+      setAnalysisResult(session.analysis || null);
+    }
+  }, [selectedCritSessionId, critSessions]);
 
   const loadBoardData = async () => {
     try {
@@ -1567,9 +1585,6 @@ function BoardPageContent({ boardId }: { boardId: string }) {
           onStopRecording={handleStopAudioRecording}
           onProcessAudio={handleProcessAudio}
           processingAudio={processingAudio}
-          audioDevices={audioDevices}
-          selectedMicId={selectedMicId}
-          onMicChange={setSelectedMicId}
         />
         <div 
           ref={canvasRef}
@@ -1725,9 +1740,6 @@ function BoardPageContent({ boardId }: { boardId: string }) {
           onStopRecording={handleStopAudioRecording}
           onProcessAudio={handleProcessAudio}
           processingAudio={processingAudio}
-          audioDevices={audioDevices}
-          selectedMicId={selectedMicId}
-          onMicChange={setSelectedMicId}
         />
         
         {/* ⭐ NEW: Show read-only banner when viewing past crit */}
@@ -1853,7 +1865,7 @@ function BoardPageContent({ boardId }: { boardId: string }) {
             </div>
           )}
           
-          {!isPreviewMode && !isPresenting && !isCritModalOpen && <CanvasToolbar
+          {!isPreviewMode && !isPresenting && !isCritModalOpen && !showAudioResults && <CanvasToolbar
             activeTool={activeTool}
             onToolChange={setActiveTool}
             zoom={zoom}
@@ -2080,6 +2092,7 @@ function BoardPageContent({ boardId }: { boardId: string }) {
             getElementSummary={getElementSummary}
             onJumpToElement={handleJumpToElement}
             getCritSessionSummary={getCritSessionSummary}
+            analysisResult={analysisResult}
             deletableAuthorName={currentUser.name}
             onDeleteComment={handleDeleteComment}
             editableAuthorName={currentUser.name}

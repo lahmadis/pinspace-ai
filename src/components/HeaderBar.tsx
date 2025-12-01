@@ -36,9 +36,6 @@ interface HeaderBarProps {
   onStopRecording?: () => void;
   onProcessAudio?: () => void;
   processingAudio?: boolean;
-  audioDevices?: MediaDeviceInfo[];
-  selectedMicId?: string;
-  onMicChange?: (deviceId: string) => void;
 }
 
 export default function HeaderBar({
@@ -63,9 +60,6 @@ export default function HeaderBar({
   onStopRecording,
   onProcessAudio,
   processingAudio = false,
-  audioDevices = [],
-  selectedMicId = "",
-  onMicChange,
 }: HeaderBarProps) {
   const router = useRouter();
   const [visibility, setVisibility] = useState<"private" | "public">("private");
@@ -139,12 +133,6 @@ export default function HeaderBar({
     router.push(`/board/${boardId}/present`);
   };
 
-  const handleExportSheet = () => {
-    const url = selectedCritSessionId
-      ? `/board/${boardId}/export?session=${selectedCritSessionId}`
-      : `/board/${boardId}/export`;
-    window.open(url, "_blank");
-  };
 
   const handleVisibilityChange = async (
     e: React.ChangeEvent<HTMLSelectElement>
@@ -245,13 +233,6 @@ export default function HeaderBar({
                 End Crit
               </button>
             )}
-            <button
-              onClick={handleExportSheet}
-              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition"
-              title="Export sheet"
-            >
-              Export sheet
-            </button>
           </div>
         </div>
       </header>
@@ -309,30 +290,14 @@ export default function HeaderBar({
             </button>
           )}
           {onStartRecording && !isRecording && !audioBlob && (
-            <>
-              {audioDevices.length > 1 && onMicChange && (
-                <select
-                  value={selectedMicId}
-                  onChange={(e) => onMicChange(e.target.value)}
-                  className="px-2 py-1 border border-gray-300 rounded text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  title="Select microphone"
-                >
-                  {audioDevices.map((device, index) => (
-                    <option key={device.deviceId} value={device.deviceId}>
-                      {device.label || `Microphone ${index + 1}`}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <button
-                onClick={onStartRecording}
-                className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition flex items-center gap-2"
-                title="Record architecture critique audio"
-              >
-                <span>🎤</span>
-                Record Crit
-              </button>
-            </>
+            <button
+              onClick={onStartRecording}
+              className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition flex items-center gap-2"
+              title="Record architecture critique audio"
+            >
+              <span>🎤</span>
+              Record Crit
+            </button>
           )}
           {isRecording && (
             <div className="flex items-center gap-3 px-4 py-2 bg-red-50 border border-red-200 rounded-md">
@@ -397,13 +362,6 @@ export default function HeaderBar({
               Share
             </button>
           )}
-          <button
-            onClick={handleExportSheet}
-            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition"
-            title="Export sheet"
-          >
-            Export sheet
-          </button>
         </div>
       </div>
 

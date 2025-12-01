@@ -50,6 +50,7 @@ interface RightPanelProps {
   editableAuthorName?: string;
   onUpdateComment?: (updatedComment: Comment) => void;
   onLoadSession?: (session: any) => void;
+  analysisResult?: any; // AI-generated analysis from audio processing
 }
 
 type TabType = "comments" | "critNotes" | "prepForCrit" | "tasks" | "summary" | "timeline";
@@ -87,6 +88,7 @@ export default function RightPanel({
   editableAuthorName,
   onUpdateComment,
   onLoadSession,
+  analysisResult = null,
 }: RightPanelProps) {
   const {
     attachments: allAttachments,
@@ -100,13 +102,20 @@ export default function RightPanel({
     enabled: !!boardId,
   });
 
-  const [activeTab, setActiveTab] = useState<"comments" | "crit" | "attachments">(isCritActive ? "crit" : "comments");
+  const [activeTab, setActiveTab] = useState<"comments" | "crit" | "attachments" | "analysis">(isCritActive ? "crit" : "comments");
   
   useEffect(() => {
     if (isCritActive && activeTab === "comments") {
       setActiveTab("crit");
     }
   }, [isCritActive, activeTab]);
+
+  // Auto-switch to Analysis tab when analysis becomes available
+  useEffect(() => {
+    if (analysisResult && activeTab !== "analysis") {
+      setActiveTab("analysis");
+    }
+  }, [analysisResult, activeTab]);
   
   const [newTaskText, setNewTaskText] = useState("");
   const [draftText, setDraftText] = useState("");
@@ -317,7 +326,7 @@ export default function RightPanel({
     }
   }, [isSubmitting, draftText, selectedElementId, isDemo, onPostComment]);
 
-  const Composer = ((singleThread) || (activeTab === "comments") || (activeTab === "crit" && isCritActive)) && !isPreviewMode && !isDemo ? (
+  const Composer = ((singleThread) || (activeTab === "comments")) && !isPreviewMode && !isDemo ? (
     <div className="border-t border-gray-200 p-4 space-y-3 bg-white">
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -417,6 +426,16 @@ export default function RightPanel({
             }`}
           >
             Attachments
+          </button>
+          <button
+            onClick={() => setActiveTab("analysis")}
+            className={`px-6 py-3 text-sm font-medium transition-colors ${
+              activeTab === "analysis"
+                ? "border-b-2 border-blue-600 text-blue-600 bg-white"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Analysis
           </button>
         </div>
       )}
@@ -800,6 +819,126 @@ export default function RightPanel({
               </div>
             )}
           </>
+        )}
+
+        {activeTab === "analysis" && (
+          <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+            {analysisResult ? (
+              <div className="max-w-4xl mx-auto">
+                <div className="mb-8">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">Critique Analysis</h2>
+                  <p className="text-gray-600">AI-generated insights from your critique session</p>
+                </div>
+                
+                {analysisResult.summary && (
+                  <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <span className="text-blue-600">📋</span>
+                      Summary
+                    </h3>
+                    <p className="text-gray-700 leading-relaxed text-base">
+                      {analysisResult.summary}
+                    </p>
+                  </div>
+                )}
+
+                {analysisResult.themes && analysisResult.themes.length > 0 && (
+                  <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <span className="text-purple-600">🎨</span>
+                      Themes
+                    </h3>
+                    <div className="space-y-4">
+                      {analysisResult.themes.map((theme: any, idx: number) => (
+                        <div 
+                          key={idx} 
+                          className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-5 border border-blue-100"
+                        >
+                          <h4 className="font-semibold text-blue-900 mb-2 text-lg">
+                            {theme.category || theme.title || `Theme ${idx + 1}`}
+                          </h4>
+                          <p className="text-gray-700 leading-relaxed">
+                            {theme.description || theme.content || theme.text}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {analysisResult.action_items && analysisResult.action_items.length > 0 && (
+                  <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <span className="text-green-600">✓</span>
+                      Action Items
+                    </h3>
+                    <ul className="space-y-3">
+                      {analysisResult.action_items.map((item: string, idx: number) => (
+                        <li 
+                          key={idx} 
+                          className="flex items-start gap-3 p-3 rounded-lg hover:bg-green-50 transition-colors"
+                        >
+                          <span className="flex-shrink-0 w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">
+                            {idx + 1}
+                          </span>
+                          <span className="text-gray-700 flex-1">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {analysisResult.keywords && analysisResult.keywords.length > 0 && (
+                  <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <span className="text-orange-600">🏷️</span>
+                      Keywords
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {analysisResult.keywords.map((keyword: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className="px-4 py-2 bg-gradient-to-r from-orange-100 to-yellow-100 text-gray-800 rounded-full text-sm font-medium border border-orange-200 hover:shadow-md transition-shadow"
+                        >
+                          {keyword}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note:</strong> This analysis was AI-generated from your critique session recording. 
+                    Use it as a guide to identify key themes and next steps for your project.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full min-h-[400px]">
+                <div className="text-center max-w-md">
+                  <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-4xl">🎤</span>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    No Analysis Available
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Record a critique session and process the audio to generate an AI analysis
+                  </p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+                    <p className="text-sm text-blue-900 mb-2 font-medium">How to create an analysis:</p>
+                    <ol className="text-sm text-blue-800 space-y-1 ml-4 list-decimal">
+                      <li>Start a Live Crit session</li>
+                      <li>Click "Record Crit" to record audio</li>
+                      <li>Click "Process Audio" when done</li>
+                      <li>Your analysis will appear here!</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         </div>

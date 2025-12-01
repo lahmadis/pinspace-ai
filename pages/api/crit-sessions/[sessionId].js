@@ -7,6 +7,24 @@ export default async function handler(req, res) {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   if (req.method === 'GET') {
+    // Try matching by id first, then by session_id for backward compatibility
+    let query = supabase.from('crit_sessions').select('*');
+    
+    // First try by id (primary key)
+    const { data: dataById, error: errorById } = await query.eq('id', sessionId).maybeSingle();
+    
+    if (!errorById && dataById) {
+      return res.status(200).json({ 
+        session: {
+          ...dataById,
+          boardId: dataById.board_id,
+          sessionId: dataById.session_id,
+          endedAt: dataById.ended_at
+        }
+      });
+    }
+    
+    // Fallback to session_id
     const { data, error } = await supabase
       .from('crit_sessions')
       .select('*')
@@ -29,7 +47,24 @@ export default async function handler(req, res) {
     const updateData = {};
     if (req.body.status) updateData.status = req.body.status;
     if (req.body.endedAt) updateData.ended_at = req.body.endedAt;
+    if (req.body.analysis) updateData.analysis = req.body.analysis;
 
+    // Try matching by id first, then by session_id for backward compatibility
+    let query = supabase.from('crit_sessions').update(updateData);
+    
+    // First try by id (primary key)
+    const { data: dataById, error: errorById } = await query.eq('id', sessionId).select().single();
+    
+    if (!errorById && dataById) {
+      return res.status(200).json({
+        ...dataById,
+        boardId: dataById.board_id,
+        sessionId: dataById.session_id,
+        endedAt: dataById.ended_at
+      });
+    }
+    
+    // Fallback to session_id
     const { data, error } = await supabase
       .from('crit_sessions')
       .update(updateData)
